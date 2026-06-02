@@ -1,109 +1,112 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  BookOpen,
-  BarChart3,
-  TrendingUp,
-  Settings,
-  ChevronRight,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Zap, LayoutDashboard, Calendar, BookOpen, BookMarked, BarChart2, Settings, Upload, ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/journal", label: "Journal", icon: BookOpen },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-];
+const navItems = [
+  {
+    section: 'OVERVIEW',
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { label: 'Calendar', href: '/analytics', icon: Calendar },
+    ],
+  },
+  {
+    section: 'TRADING',
+    items: [
+      { label: 'Journal', href: '/journal', icon: BookOpen },
+      { label: 'Playbook', href: '#', icon: BookMarked },
+      { label: 'Analytics', href: '/analytics', icon: BarChart2 },
+    ],
+  },
+  {
+    section: 'ACCOUNT',
+    items: [
+      { label: 'Settings', href: '#', icon: Settings },
+      { label: 'Import Trades', href: '#', icon: Upload },
+    ],
+  },
+]
 
-export function Sidebar() {
-  const pathname = usePathname();
+export default function Sidebar() {
+  const pathname = usePathname()
 
   return (
-    <aside
-      className="fixed left-0 top-0 h-full w-64 flex flex-col z-40"
-      style={{ background: "#0d0d1a", borderRight: "1px solid #1a1a30" }}
-    >
+    <aside className="fixed left-0 top-0 bottom-0 w-60 bg-[#111111] border-r border-[#2a2a2a] flex flex-col z-40">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b" style={{ borderColor: "#1a1a30" }}>
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
-        >
-          <TrendingUp className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <div className="font-bold text-white text-lg leading-none tracking-tight">
-            TradesWorld
+      <div className="h-16 flex items-center px-5 border-b border-[#2a2a2a]">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[#7c3aed] flex items-center justify-center">
+            <Zap className="w-4 h-4 text-white fill-white" />
           </div>
-          <div className="text-xs mt-0.5" style={{ color: "#6366f1" }}>
-            Pro Trading Journal
+          <span className="text-white font-bold text-lg">TradeZella</span>
+        </Link>
+      </div>
+
+      {/* Account selector */}
+      <div className="px-3 py-3 border-b border-[#2a2a2a]">
+        <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#181818] border border-[#2a2a2a] hover:border-[#3a3a3a] transition-colors">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#22c55e]" />
+            <span className="text-white text-sm font-medium">Main Account</span>
           </div>
-        </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[#22c55e] text-xs font-semibold">+$8,420</span>
+            <ChevronDown className="w-3 h-3 text-[#71717a]" />
+          </div>
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        <p className="text-xs font-semibold px-3 mb-3 uppercase tracking-wider" style={{ color: "#4b5563" }}>
-          Menu
-        </p>
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
-                active
-                  ? "text-white"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-              )}
-              style={
-                active
-                  ? {
-                      background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.1))",
-                      border: "1px solid rgba(99,102,241,0.3)",
-                    }
-                  : {}
-              }
-            >
-              <Icon
-                className={cn("w-4.5 h-4.5 transition-colors", active ? "text-indigo-400" : "text-gray-500 group-hover:text-gray-300")}
-                size={18}
-              />
-              <span className="flex-1">{label}</span>
-              {active && (
-                <ChevronRight size={14} className="text-indigo-400" />
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto py-4 px-3">
+        {navItems.map(section => (
+          <div key={section.section} className="mb-6">
+            <p className="text-[#71717a] text-xs font-semibold uppercase tracking-widest px-3 mb-2">
+              {section.section}
+            </p>
+            <ul className="space-y-0.5">
+              {section.items.map(item => {
+                const Icon = item.icon
+                const active = pathname === item.href
+                return (
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                        active
+                          ? 'bg-[#7c3aed]/10 text-[#8b5cf6] font-medium'
+                          : 'text-[#a1a1aa] hover:text-white hover:bg-[#181818]'
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
-      {/* Bottom */}
-      <div className="px-4 py-4 border-t" style={{ borderColor: "#1a1a30" }}>
-        <div
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-          style={{ background: "rgba(255,255,255,0.03)" }}
-        >
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
-          >
-            T
+      {/* User */}
+      <div className="border-t border-[#2a2a2a] p-3">
+        <div className="flex items-center gap-3 px-3 py-2">
+          <div className="w-8 h-8 rounded-full bg-[#7c3aed] flex items-center justify-center text-white text-sm font-bold">
+            J
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-white truncate">Trader</div>
-            <div className="text-xs truncate" style={{ color: "#6b7280" }}>
-              Pro Account
-            </div>
+            <p className="text-white text-sm font-medium truncate">John Trader</p>
+            <p className="text-[#71717a] text-xs truncate">Pro Plan</p>
           </div>
-          <Settings size={15} className="text-gray-500 flex-shrink-0" />
+          <span className="text-xs bg-[#7c3aed]/10 text-[#8b5cf6] border border-[#7c3aed]/30 px-2 py-0.5 rounded-full">
+            PRO
+          </span>
         </div>
       </div>
     </aside>
-  );
+  )
 }

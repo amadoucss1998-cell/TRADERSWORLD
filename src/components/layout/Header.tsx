@@ -1,68 +1,40 @@
-"use client";
+'use client'
 
-import { Bell, Search, Plus } from "lucide-react";
-import { useState } from "react";
-import { AddTradeModal } from "@/components/trades/AddTradeModal";
+import { useState } from 'react'
+import { CalendarDays, Plus } from 'lucide-react'
+import AddTradeModal from '@/components/journal/AddTradeModal'
 
 interface HeaderProps {
-  title: string;
-  subtitle?: string;
+  title: string
+  breadcrumb?: string
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
-  const [showAdd, setShowAdd] = useState(false);
+export default function Header({ title, breadcrumb }: HeaderProps) {
+  const [showModal, setShowModal] = useState(false)
 
   return (
     <>
-      <header
-        className="sticky top-0 z-30 flex items-center justify-between px-6 py-4"
-        style={{
-          background: "rgba(15,15,15,0.8)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
-        }}
-      >
-        <div>
-          <h1 className="text-xl font-bold text-white">{title}</h1>
-          {subtitle && <p className="text-sm mt-0.5" style={{ color: "#6b7280" }}>{subtitle}</p>}
+      <header className="sticky top-0 z-30 bg-[#0d0d0d]/80 backdrop-blur border-b border-[#2a2a2a] h-16 flex items-center px-6 gap-4">
+        <div className="flex-1">
+          {breadcrumb && <p className="text-[#71717a] text-xs">{breadcrumb}</p>}
+          <h1 className="text-white font-semibold text-lg">{title}</h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "#6b7280",
-            }}
-          >
-            <Search size={14} />
-            <span className="hidden md:block">Quick search...</span>
-          </div>
+        <button className="flex items-center gap-2 border border-[#2a2a2a] hover:border-[#3a3a3a] text-[#a1a1aa] hover:text-white text-sm px-4 py-2 rounded-lg transition-colors">
+          <CalendarDays className="w-4 h-4" />
+          <span>Last 90 Days</span>
+        </button>
 
-          <button
-            className="flex items-center justify-center w-9 h-9 rounded-xl relative"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            <Bell size={16} className="text-gray-400" />
-            <span
-              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-              style={{ background: "#6366f1" }}
-            />
-          </button>
-
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
-          >
-            <Plus size={16} />
-            <span>Add Trade</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Trade
+        </button>
       </header>
 
-      <AddTradeModal open={showAdd} onClose={() => setShowAdd(false)} />
+      <AddTradeModal open={showModal} onClose={() => setShowModal(false)} />
     </>
-  );
+  )
 }

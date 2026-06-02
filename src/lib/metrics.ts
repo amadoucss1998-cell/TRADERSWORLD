@@ -1,199 +1,166 @@
-import { Trade } from "./trades";
+import type { Trade } from './trades'
 
-export interface TradeMetrics {
-  totalPnl: number;
-  totalTrades: number;
-  winCount: number;
-  lossCount: number;
-  winRate: number;
-  avgWin: number;
-  avgLoss: number;
-  profitFactor: number;
-  maxDrawdown: number;
-  sharpeRatio: number;
-  bestTrade: number;
-  worstTrade: number;
-  avgRR: number;
-  totalCommissions: number;
-  longsCount: number;
-  shortsCount: number;
-  longWinRate: number;
-  shortWinRate: number;
-  avgHoldTime: number; // minutes
-  currentStreak: number;
-  streakType: "WIN" | "LOSS" | "NONE";
+export interface Metrics {
+  netPnL: number
+  winRate: number
+  profitFactor: number
+  totalTrades: number
+  avgWin: number
+  avgLoss: number
+  avgRR: number
+  maxDrawdown: number
+  totalWins: number
+  totalLosses: number
+  breakEven: number
+  grossWins: number
+  grossLosses: number
 }
 
-export interface EquityPoint {
-  date: string;
-  equity: number;
-  pnl: number;
-  cumPnl: number;
-}
-
-export interface CalendarDay {
-  date: string;
-  pnl: number;
-  tradeCount: number;
-}
-
-export interface SymbolStat {
-  symbol: string;
-  totalPnl: number;
-  tradeCount: number;
-  winRate: number;
-}
-
-export function computeMetrics(trades: Trade[]): TradeMetrics {
-  if (trades.length === 0) {
+export function calcMetrics(trades: Trade[]): Metrics {
+  if (!trades.length) {
     return {
-      totalPnl: 0, totalTrades: 0, winCount: 0, lossCount: 0,
-      winRate: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
-      maxDrawdown: 0, sharpeRatio: 0, bestTrade: 0, worstTrade: 0,
-      avgRR: 0, totalCommissions: 0, longsCount: 0, shortsCount: 0,
-      longWinRate: 0, shortWinRate: 0, avgHoldTime: 0,
-      currentStreak: 0, streakType: "NONE",
-    };
-  }
-
-  const sorted = [...trades].sort(
-    (a, b) => new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()
-  );
-
-  const wins = sorted.filter((t) => t.status === "WIN");
-  const losses = sorted.filter((t) => t.status === "LOSS");
-
-  const totalPnl = sorted.reduce((s, t) => s + t.pnl, 0);
-  const winCount = wins.length;
-  const lossCount = losses.length;
-  const winRate = sorted.length > 0 ? (winCount / sorted.length) * 100 : 0;
-
-  const totalWins = wins.reduce((s, t) => s + t.pnl, 0);
-  const totalLosses = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
-
-  const avgWin = winCount > 0 ? totalWins / winCount : 0;
-  const avgLoss = lossCount > 0 ? totalLosses / lossCount : 0;
-  const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
-
-  // Max Drawdown
-  let peak = 0;
-  let cumPnl = 0;
-  let maxDrawdown = 0;
-  for (const t of sorted) {
-    cumPnl += t.pnl;
-    if (cumPnl > peak) peak = cumPnl;
-    const drawdown = peak - cumPnl;
-    if (drawdown > maxDrawdown) maxDrawdown = drawdown;
-  }
-
-  // Sharpe (simplified: mean/std of daily P&L, annualized)
-  const dailyMap: Record<string, number> = {};
-  for (const t of sorted) {
-    const day = t.exitDate.slice(0, 10);
-    dailyMap[day] = (dailyMap[day] || 0) + t.pnl;
-  }
-  const dailyPnls = Object.values(dailyMap);
-  const meanDaily = dailyPnls.reduce((s, v) => s + v, 0) / (dailyPnls.length || 1);
-  const stdDaily = Math.sqrt(
-    dailyPnls.reduce((s, v) => s + Math.pow(v - meanDaily, 2), 0) / (dailyPnls.length || 1)
-  );
-  const sharpeRatio = stdDaily > 0 ? (meanDaily / stdDaily) * Math.sqrt(252) : 0;
-
-  const bestTrade = Math.max(...sorted.map((t) => t.pnl));
-  const worstTrade = Math.min(...sorted.map((t) => t.pnl));
-
-  const longs = sorted.filter((t) => t.side === "LONG");
-  const shorts = sorted.filter((t) => t.side === "SHORT");
-  const longWins = longs.filter((t) => t.status === "WIN").length;
-  const shortWins = shorts.filter((t) => t.status === "WIN").length;
-
-  const avgHoldTime =
-    sorted.reduce((s, t) => {
-      const diff = new Date(t.exitDate).getTime() - new Date(t.entryDate).getTime();
-      return s + diff / 60000;
-    }, 0) / (sorted.length || 1);
-
-  // Current streak
-  let currentStreak = 0;
-  let streakType: "WIN" | "LOSS" | "NONE" = "NONE";
-  const reversedTrades = [...sorted].reverse();
-  if (reversedTrades.length > 0 && reversedTrades[0].status !== "BREAKEVEN") {
-    streakType = reversedTrades[0].status as "WIN" | "LOSS";
-    for (const t of reversedTrades) {
-      if (t.status === streakType) currentStreak++;
-      else break;
+      netPnL: 0, winRate: 0, profitFactor: 0, totalTrades: 0,
+      avgWin: 0, avgLoss: 0, avgRR: 0, maxDrawdown: 0,
+      totalWins: 0, totalLosses: 0, breakEven: 0,
+      grossWins: 0, grossLosses: 0,
     }
+  }
+
+  const wins = trades.filter(t => t.netPnL > 0)
+  const losses = trades.filter(t => t.netPnL < 0)
+  const be = trades.filter(t => t.netPnL === 0)
+
+  const netPnL = trades.reduce((s, t) => s + t.netPnL, 0)
+  const grossWins = wins.reduce((s, t) => s + t.netPnL, 0)
+  const grossLosses = Math.abs(losses.reduce((s, t) => s + t.netPnL, 0))
+
+  const winRate = (wins.length / trades.length) * 100
+  const profitFactor = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? Infinity : 0
+  const avgWin = wins.length ? grossWins / wins.length : 0
+  const avgLoss = losses.length ? -(grossLosses / losses.length) : 0
+  const avgRR = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0
+
+  // Max drawdown: running equity
+  let peak = 0
+  let equity = 0
+  let maxDD = 0
+  const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  for (const t of sorted) {
+    equity += t.netPnL
+    if (equity > peak) peak = equity
+    const dd = peak - equity
+    if (dd > maxDD) maxDD = dd
   }
 
   return {
-    totalPnl,
-    totalTrades: sorted.length,
-    winCount,
-    lossCount,
+    netPnL,
     winRate,
+    profitFactor,
+    totalTrades: trades.length,
     avgWin,
     avgLoss,
-    profitFactor,
-    maxDrawdown,
-    sharpeRatio,
-    bestTrade,
-    worstTrade,
-    avgRR: avgLoss > 0 ? avgWin / avgLoss : 0,
-    totalCommissions: sorted.reduce((s, t) => s + t.commission, 0),
-    longsCount: longs.length,
-    shortsCount: shorts.length,
-    longWinRate: longs.length > 0 ? (longWins / longs.length) * 100 : 0,
-    shortWinRate: shorts.length > 0 ? (shortWins / shorts.length) * 100 : 0,
-    avgHoldTime,
-    currentStreak,
-    streakType,
-  };
-}
-
-export function buildEquityCurve(trades: Trade[]): EquityPoint[] {
-  const sorted = [...trades].sort(
-    (a, b) => new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()
-  );
-
-  let cumPnl = 0;
-  return sorted.map((t) => {
-    cumPnl += t.pnl;
-    return {
-      date: t.exitDate.slice(0, 10),
-      equity: 10000 + cumPnl,
-      pnl: t.pnl,
-      cumPnl,
-    };
-  });
-}
-
-export function buildCalendarData(trades: Trade[]): CalendarDay[] {
-  const map: Record<string, CalendarDay> = {};
-  for (const t of trades) {
-    const day = t.exitDate.slice(0, 10);
-    if (!map[day]) {
-      map[day] = { date: day, pnl: 0, tradeCount: 0 };
-    }
-    map[day].pnl += t.pnl;
-    map[day].tradeCount += 1;
+    avgRR,
+    maxDrawdown: maxDD,
+    totalWins: wins.length,
+    totalLosses: losses.length,
+    breakEven: be.length,
+    grossWins,
+    grossLosses,
   }
-  return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export function buildSymbolStats(trades: Trade[]): SymbolStat[] {
-  const map: Record<string, { pnl: number; total: number; wins: number }> = {};
+export interface EquityPoint {
+  date: string
+  equity: number
+}
+
+export function calcEquityCurve(trades: Trade[]): EquityPoint[] {
+  const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  let running = 0
+  return sorted.map(t => {
+    running += t.netPnL
+    return { date: t.date.slice(0, 10), equity: parseFloat(running.toFixed(2)) }
+  })
+}
+
+export interface DailyPnL {
+  day: string
+  pnl: number
+}
+
+export function calcDailyPnL(trades: Trade[]): DailyPnL[] {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const map: Record<string, number> = {}
   for (const t of trades) {
-    if (!map[t.symbol]) map[t.symbol] = { pnl: 0, total: 0, wins: 0 };
-    map[t.symbol].pnl += t.pnl;
-    map[t.symbol].total += 1;
-    if (t.status === "WIN") map[t.symbol].wins += 1;
+    const dow = days[new Date(t.date).getDay()]
+    map[dow] = (map[dow] || 0) + t.netPnL
+  }
+  return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => ({ day: d, pnl: parseFloat((map[d] || 0).toFixed(2)) }))
+}
+
+export interface SymbolStat {
+  symbol: string
+  trades: number
+  winRate: number
+  avgPnL: number
+  totalPnL: number
+  avgHoldTime: number
+}
+
+export function calcSymbolStats(trades: Trade[]): SymbolStat[] {
+  const map: Record<string, Trade[]> = {}
+  for (const t of trades) {
+    if (!map[t.symbol]) map[t.symbol] = []
+    map[t.symbol].push(t)
+  }
+  return Object.entries(map).map(([symbol, ts]) => {
+    const wins = ts.filter(t => t.netPnL > 0).length
+    return {
+      symbol,
+      trades: ts.length,
+      winRate: (wins / ts.length) * 100,
+      avgPnL: ts.reduce((s, t) => s + t.netPnL, 0) / ts.length,
+      totalPnL: ts.reduce((s, t) => s + t.netPnL, 0),
+      avgHoldTime: ts.reduce((s, t) => s + t.holdTime, 0) / ts.length,
+    }
+  }).sort((a, b) => b.totalPnL - a.totalPnL)
+}
+
+export interface MonthlyPnL {
+  month: string
+  pnl: number
+}
+
+export function calcMonthlyPnL(trades: Trade[]): MonthlyPnL[] {
+  const map: Record<string, number> = {}
+  for (const t of trades) {
+    const key = t.date.slice(0, 7)
+    map[key] = (map[key] || 0) + t.netPnL
   }
   return Object.entries(map)
-    .map(([symbol, d]) => ({
-      symbol,
-      totalPnl: d.pnl,
-      tradeCount: d.total,
-      winRate: (d.wins / d.total) * 100,
-    }))
-    .sort((a, b) => b.totalPnl - a.totalPnl);
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, pnl]) => {
+      const d = new Date(key + '-01')
+      return {
+        month: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        pnl: parseFloat(pnl.toFixed(2)),
+      }
+    })
+}
+
+export interface CalendarDay {
+  date: string
+  pnl: number
+  trades: number
+}
+
+export function calcCalendar(trades: Trade[]): CalendarDay[] {
+  const map: Record<string, { pnl: number; trades: number }> = {}
+  for (const t of trades) {
+    const key = t.date.slice(0, 10)
+    if (!map[key]) map[key] = { pnl: 0, trades: 0 }
+    map[key].pnl += t.netPnL
+    map[key].trades++
+  }
+  return Object.entries(map).map(([date, v]) => ({ date, pnl: parseFloat(v.pnl.toFixed(2)), trades: v.trades }))
 }

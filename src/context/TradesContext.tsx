@@ -1,58 +1,51 @@
-"use client";
+'use client'
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Trade, TradeInput, createTrade, updateTrade, loadTrades, saveTrades } from "@/lib/trades";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { type Trade, loadTrades, saveTrades } from '@/lib/trades'
 
-interface TradesContextType {
-  trades: Trade[];
-  addTrade: (input: TradeInput) => void;
-  editTrade: (id: string, input: TradeInput) => void;
-  deleteTrade: (id: string) => void;
-  resetToMock: () => void;
+interface TradesContextValue {
+  trades: Trade[]
+  addTrade: (trade: Trade) => void
+  removeTrade: (id: string) => void
+  loading: boolean
 }
 
-const TradesContext = createContext<TradesContextType | null>(null);
+const TradesContext = createContext<TradesContextValue | null>(null)
 
-export function TradesProvider({ children }: { children: React.ReactNode }) {
-  const [trades, setTrades] = useState<Trade[]>([]);
+export function TradesProvider({ children }: { children: ReactNode }) {
+  const [trades, setTrades] = useState<Trade[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setTrades(loadTrades());
-  }, []);
+    setTrades(loadTrades())
+    setLoading(false)
+  }, [])
 
-  function addTrade(input: TradeInput) {
-    const next = [createTrade(input), ...trades];
-    setTrades(next);
-    saveTrades(next);
-  }
+  const addTrade = useCallback((trade: Trade) => {
+    setTrades(prev => {
+      const next = [trade, ...prev]
+      saveTrades(next)
+      return next
+    })
+  }, [])
 
-  function editTrade(id: string, input: TradeInput) {
-    const next = trades.map((t) => (t.id === id ? updateTrade(t, input) : t));
-    setTrades(next);
-    saveTrades(next);
-  }
-
-  function deleteTrade(id: string) {
-    const next = trades.filter((t) => t.id !== id);
-    setTrades(next);
-    saveTrades(next);
-  }
-
-  function resetToMock() {
-    const { MOCK_TRADES } = require("@/lib/trades");
-    setTrades(MOCK_TRADES);
-    saveTrades(MOCK_TRADES);
-  }
+  const removeTrade = useCallback((id: string) => {
+    setTrades(prev => {
+      const next = prev.filter(t => t.id !== id)
+      saveTrades(next)
+      return next
+    })
+  }, [])
 
   return (
-    <TradesContext.Provider value={{ trades, addTrade, editTrade, deleteTrade, resetToMock }}>
+    <TradesContext.Provider value={{ trades, addTrade, removeTrade, loading }}>
       {children}
     </TradesContext.Provider>
-  );
+  )
 }
 
 export function useTrades() {
-  const ctx = useContext(TradesContext);
-  if (!ctx) throw new Error("useTrades must be used inside TradesProvider");
-  return ctx;
+  const ctx = useContext(TradesContext)
+  if (!ctx) throw new Error('useTrades must be used within TradesProvider')
+  return ctx
 }
