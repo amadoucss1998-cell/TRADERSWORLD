@@ -5,14 +5,20 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'TradeZella — The Trading Journal That Makes You A Better Trader',
-  description: 'Track, analyze, and improve your trading performance with powerful analytics and insights.',
+  title: 'ScholarPath — AI Scholarship Finder for Liberian Students',
+  description: 'Find scholarships, write essays, and manage applications with AI assistance. Built for Liberian students seeking international opportunities.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en" className={inter.className}>
-      <body>{children}</body>
+    <html lang="en" className="dark">
+      <body className={`${inter.className} bg-[#0a0a0a] text-white antialiased`}>
+        {children}
+      </body>
     </html>
   )
 }
