@@ -22,7 +22,9 @@ Write a professional, concise cover letter (250 words max) addressed to the scho
 - How the scholarship aligns with their goals
 - Professional closing
 
-Write only the letter — no preamble.`,
+IMPORTANT: Output plain text only. No markdown, no HTML tags, no asterisks, no special formatting symbols. Write it as a real letter with proper paragraph breaks using blank lines.
+
+Write only the letter — no preamble, no commentary.`,
 
   personal_statement: (profile: Record<string, string>, scholarship: Record<string, string>) => `
 Write a personal statement for a scholarship application.
@@ -45,7 +47,9 @@ Write a compelling 400-word personal statement that:
 - Explains why this specific scholarship
 - Ends with vision for impact back home
 
-Write only the statement — no preamble.`,
+IMPORTANT: Output plain text only. No markdown, no HTML tags, no asterisks, no special formatting symbols. Use paragraph breaks (blank lines) between paragraphs.
+
+Write only the statement — no preamble, no commentary.`,
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

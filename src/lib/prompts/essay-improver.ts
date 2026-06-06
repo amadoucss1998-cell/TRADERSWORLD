@@ -12,5 +12,5 @@ Word Limit: ${wordLimit} words
 
 Instruction: "${instruction}"
 
-Revise the essay following the instruction exactly. Return ONLY the revised essay (no explanation, no preamble). Keep it within ${wordLimit} words.`
+Revise the essay following the instruction exactly. Output plain text only — no markdown, no HTML, no asterisks. Use blank lines between paragraphs. Return ONLY the revised essay (no explanation, no preamble). Keep it within ${wordLimit} words.`
 }

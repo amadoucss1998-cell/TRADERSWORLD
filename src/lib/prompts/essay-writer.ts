@@ -36,5 +36,5 @@ Write a compelling, authentic scholarship essay that:
 6. Stays strictly within ${wordLimit} words
 7. Uses clear, confident academic English
 
-Write the essay directly — no preamble, no "Here is the essay:" — just the essay itself.`
+Output plain text only — no markdown, no HTML, no asterisks, no special symbols. Use blank lines between paragraphs. Write the essay directly — no preamble, no "Here is the essay:" — just the essay itself.`
 }

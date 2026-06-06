@@ -6,16 +6,44 @@ export function buildCVPrompt(profile: Profile, targetField: string): string {
 Create a professional academic CV for this student targeting ${targetField} scholarships.
 
 Student Profile:
-${JSON.stringify(profile, null, 2)}
+- Name: ${profile.full_name || 'N/A'}
+- Email: ${profile.email || 'N/A'}
+- Nationality: ${profile.nationality || 'Liberian'}
+- Institution: ${profile.current_institution || 'N/A'}
+- Degree: ${profile.degree_level || 'N/A'} in ${profile.field_of_study || 'N/A'}
+- GPA: ${profile.gpa || 'N/A'}
+- Expected Graduation: ${profile.graduation_year || 'N/A'}
+- Work Experience: ${profile.work_experience || 'None listed'}
+- Achievements: ${profile.achievements || 'None listed'}
+- Extracurriculars: ${Array.isArray(profile.extracurriculars) ? profile.extracurriculars.join(', ') : profile.extracurriculars || 'None listed'}
+- English Proficiency: ${profile.english_proficiency || 'Fluent'}
 
-Generate a well-formatted CV in Markdown with these sections:
-1. Personal Information (name, email, nationality)
-2. Education (current institution, degree, GPA, expected graduation)
-3. Research/Academic Achievements
-4. Work Experience
-5. Extracurricular Activities & Leadership
-6. Skills (languages, technical)
-7. References (Available upon request)
+IMPORTANT: Output plain text only. No markdown, no asterisks, no pound signs (#), no HTML tags.
+Use UPPERCASE for section headers. Use a dash (-) for bullet points. Separate sections with a blank line.
 
-Use clean markdown formatting. Be specific and impactful.`
+Structure:
+CURRICULUM VITAE
+
+[Full Name]
+[Email] | [Nationality]
+
+EDUCATION
+- [Degree] in [Field], [Institution] (Expected [Year])
+- GPA: [GPA]
+
+ACADEMIC ACHIEVEMENTS
+- [List achievements]
+
+WORK EXPERIENCE
+- [List experience]
+
+EXTRACURRICULAR ACTIVITIES
+- [List activities]
+
+SKILLS
+- Languages: English ([proficiency level])
+- [Other skills]
+
+REFERENCES
+Available upon request`
 }
