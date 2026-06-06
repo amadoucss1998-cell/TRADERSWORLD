@@ -81,18 +81,18 @@ With your support, I will.`
     const encoder = new TextEncoder()
     const readable = new ReadableStream({
       start(controller) {
-        // Stream the fallback word by word to simulate streaming
-        const words = fallback.split(' ')
+        // Stream in small chunks to feel fast and natural (~1.5s total)
+        const chunks = fallback.match(/.{1,40}/g) ?? []
         let i = 0
         const interval = setInterval(() => {
-          if (i < words.length) {
-            controller.enqueue(encoder.encode((i > 0 ? ' ' : '') + words[i]))
+          if (i < chunks.length) {
+            controller.enqueue(encoder.encode(chunks[i]))
             i++
           } else {
             clearInterval(interval)
             controller.close()
           }
-        }, 30)
+        }, 15)
       },
     })
 
