@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
@@ -17,39 +16,30 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const admin = createAdminClient()
+    const supabase = await createClient()
 
-    const { data, error } = await admin.auth.admin.createUser({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      user_metadata: { full_name },
-      email_confirm: true,
+      options: { data: { full_name } },
     })
 
     if (error) {
       const msg = error.message.toLowerCase()
-      if (msg.includes('already') || msg.includes('exists') || msg.includes('duplicate')) {
+      if (msg.includes('already') || msg.includes('exists') || msg.includes('registered')) {
         return Response.json({ error: 'An account with this email already exists.' }, { status: 409 })
       }
       return Response.json({ error: error.message }, { status: 400 })
     }
 
     if (!data?.user) {
-      return Response.json({ error: 'User creation returned no data. Check Supabase service role key.' }, { status: 500 })
-    }
-
-    // Sign in to set session cookie
-    try {
-      const supabase = await createClient()
-      await supabase.auth.signInWithPassword({ email, password })
-    } catch {
-      // Session cookie failed but account was created — user can log in manually
+      return Response.json({ error: 'Registration failed. Please try again.' }, { status: 500 })
     }
 
     return Response.json({ user: { id: data.user.id, email, full_name } })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('Register error:', msg)
-    return Response.json({ error: msg || 'Registration failed. Please try again.' }, { status: 500 })
+    return Response.json({ error: msg }, { status: 500 })
   }
 }
