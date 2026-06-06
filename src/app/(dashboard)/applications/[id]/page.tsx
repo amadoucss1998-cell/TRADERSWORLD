@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft, Save, Clock, ChevronDown, Loader2, Copy, Download,
-  CheckCircle, ExternalLink, FileText, PenLine, User, ClipboardList
+  CheckCircle, ExternalLink, FileText, PenLine, User, ClipboardList,
+  Send, X, Trophy, XCircle, RotateCcw
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -14,6 +15,15 @@ import { AIPanel } from '@/components/editor/AIPanel'
 import { formatDate, daysUntil } from '@/lib/utils'
 import type { Application, EssayVersion } from '@/types/application'
 import type { Profile } from '@/types/profile'
+
+type AppStatus = 'draft' | 'submitted' | 'accepted' | 'rejected'
+
+const STATUS_OPTIONS: { value: AppStatus; label: string; icon: React.ElementType; color: string; bg: string; border: string }[] = [
+  { value: 'draft',     label: 'Draft',     icon: PenLine,   color: 'text-[#a1a1aa]', bg: 'bg-[#1f1f1f]',      border: 'border-[#2a2a2a]' },
+  { value: 'submitted', label: 'Submitted', icon: Send,      color: 'text-blue-400',  bg: 'bg-blue-500/10',    border: 'border-blue-500/30' },
+  { value: 'accepted',  label: 'Accepted',  icon: Trophy,    color: 'text-green-400', bg: 'bg-green-500/10',   border: 'border-green-500/30' },
+  { value: 'rejected',  label: 'Rejected',  icon: XCircle,   color: 'text-red-400',   bg: 'bg-red-500/10',     border: 'border-red-500/30' },
+]
 
 type Tab = 'essay' | 'cv' | 'cover_letter' | 'personal_statement' | 'checklist'
 
@@ -52,6 +62,10 @@ export default function ApplicationEditorPage() {
   const [generatingDoc, setGeneratingDoc] = useState<string | null>(null)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
   const [copySuccess, setCopySuccess] = useState<string | null>(null)
+  const [showStatusModal, setShowStatusModal] = useState(false)
+  const [statusNote, setStatusNote] = useState('')
+  const [submittedDate, setSubmittedDate] = useState('')
+  const [updatingStatus, setUpdatingStatus] = useState(false)
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -90,6 +104,20 @@ export default function ApplicationEditorPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fields),
     })
+  }
+
+  async function updateStatus(newStatus: AppStatus) {
+    if (!app) return
+    setUpdatingStatus(true)
+    const fields: Record<string, unknown> = { status: newStatus }
+    if (newStatus === 'submitted' && submittedDate) fields.deadline = submittedDate
+    if (statusNote) fields.notes = statusNote
+    await patchApplication(fields)
+    setApp(prev => prev ? { ...prev, status: newStatus } : prev)
+    setShowStatusModal(false)
+    setStatusNote('')
+    setSubmittedDate('')
+    setUpdatingStatus(false)
   }
 
   async function handleSaveDraft() {
@@ -202,9 +230,22 @@ export default function ApplicationEditorPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={app.status === 'accepted' ? 'success' : app.status === 'rejected' ? 'danger' : 'secondary'}>
+          <button
+            onClick={() => setShowStatusModal(true)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80 ${
+              app.status === 'accepted' ? 'text-green-400 bg-green-500/10 border-green-500/30' :
+              app.status === 'rejected' ? 'text-red-400 bg-red-500/10 border-red-500/30' :
+              app.status === 'submitted' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
+              'text-[#a1a1aa] bg-[#1f1f1f] border-[#2a2a2a]'
+            }`}
+          >
+            {app.status === 'accepted' && <Trophy className="h-3 w-3" />}
+            {app.status === 'rejected' && <XCircle className="h-3 w-3" />}
+            {app.status === 'submitted' && <Send className="h-3 w-3" />}
+            {app.status === 'draft' && <PenLine className="h-3 w-3" />}
             {app.status}
-          </Badge>
+            <ChevronDown className="h-3 w-3 ml-0.5" />
+          </button>
           {scholarshipUrl && (
             <Button variant="outline" size="sm" onClick={() => window.open(scholarshipUrl, '_blank')} className="gap-1.5">
               <ExternalLink className="h-3.5 w-3.5" /> Apply on Website
@@ -406,6 +447,103 @@ export default function ApplicationEditorPage() {
           </div>
         )}
       </div>
+
+      {/* Status Update Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#111111] border border-[#1f1f1f] rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-[#1f1f1f]">
+              <h2 className="text-sm font-semibold text-white">Update Application Status</h2>
+              <button onClick={() => setShowStatusModal(false)} className="text-[#71717a] hover:text-white transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Status options */}
+              <div className="grid grid-cols-2 gap-2">
+                {STATUS_OPTIONS.map(opt => {
+                  const Icon = opt.icon
+                  const isSelected = app.status === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => !updatingStatus && updateStatus(opt.value)}
+                      disabled={updatingStatus}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        isSelected
+                          ? `${opt.bg} ${opt.border} ${opt.color}`
+                          : 'border-[#1f1f1f] bg-[#0d0d0d] text-[#71717a] hover:border-[#2a2a2a] hover:text-white'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="text-xs font-medium">{opt.label}</span>
+                      {isSelected && <span className="text-[10px] opacity-70">Current</span>}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Submitted date picker */}
+              {app.status !== 'draft' && (
+                <div>
+                  <label className="text-xs text-[#71717a] block mb-1.5">
+                    {app.status === 'submitted' ? 'Date Submitted' : app.status === 'accepted' || app.status === 'rejected' ? 'Decision Date' : 'Date'}
+                  </label>
+                  <input
+                    type="date"
+                    value={submittedDate}
+                    onChange={e => setSubmittedDate(e.target.value)}
+                    className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-600"
+                  />
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs text-[#71717a] block mb-1.5">Notes (optional)</label>
+                <textarea
+                  value={statusNote}
+                  onChange={e => setStatusNote(e.target.value)}
+                  placeholder={
+                    app.status === 'submitted' ? 'e.g. Submitted via online portal, reference #12345'
+                    : app.status === 'accepted' ? 'e.g. Award amount, conditions, next steps...'
+                    : app.status === 'rejected' ? 'e.g. Reason given, reapply next year...'
+                    : 'Any notes about this application...'
+                  }
+                  rows={3}
+                  className="w-full bg-[#0d0d0d] border border-[#1f1f1f] rounded-lg px-3 py-2 text-sm text-white placeholder-[#3a3a3a] focus:outline-none focus:border-green-600 resize-none"
+                />
+              </div>
+
+              {/* Quick actions */}
+              <div className="flex gap-2 pt-1">
+                {app.status === 'draft' && (
+                  <Button className="flex-1 gap-2" onClick={() => updateStatus('submitted')} disabled={updatingStatus}>
+                    {updatingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Mark as Submitted
+                  </Button>
+                )}
+                {app.status === 'submitted' && (
+                  <>
+                    <Button className="flex-1 gap-2 bg-green-700 hover:bg-green-600" onClick={() => updateStatus('accepted')} disabled={updatingStatus}>
+                      <Trophy className="h-4 w-4" /> Accepted!
+                    </Button>
+                    <Button variant="outline" className="flex-1 gap-2 border-red-500/30 text-red-400 hover:bg-red-500/10" onClick={() => updateStatus('rejected')} disabled={updatingStatus}>
+                      <XCircle className="h-4 w-4" /> Rejected
+                    </Button>
+                  </>
+                )}
+                {(app.status === 'accepted' || app.status === 'rejected') && (
+                  <Button variant="outline" className="flex-1 gap-2" onClick={() => updateStatus('draft')} disabled={updatingStatus}>
+                    <RotateCcw className="h-4 w-4" /> Reset to Draft
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
