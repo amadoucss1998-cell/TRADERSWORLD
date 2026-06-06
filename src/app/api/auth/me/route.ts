@@ -1,7 +1,9 @@
-import { getSession } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
-  const session = await getSession()
-  if (!session) return Response.json({ user: null }, { status: 401 })
-  return Response.json({ user: { id: session.userId, email: session.email, full_name: session.fullName } })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return Response.json({ user: null }, { status: 401 })
+  const full_name = user.user_metadata?.full_name || user.email?.split('@')[0] || ''
+  return Response.json({ user: { id: user.id, email: user.email, full_name } })
 }

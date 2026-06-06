@@ -1,11 +1,12 @@
-import { getSession } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { anthropic, CLAUDE_MODEL } from '@/lib/claude'
 import { buildCVPrompt } from '@/lib/prompts/cv-generator'
 import { NextRequest } from 'next/server'
 
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { profile, target_field } = await req.json()
 

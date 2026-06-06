@@ -1,32 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { createServerClient } from '@supabase/ssr'
 
 const PROTECTED = ['/search', '/scholarships', '/applications', '/documents', '/profile', '/dashboard']
 const AUTH_PAGES = ['/login', '/register']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const token = req.cookies.get('sp_token')?.value
-
   const isProtected = PROTECTED.some(p => pathname.startsWith(p))
   const isAuthPage = AUTH_PAGES.some(p => pathname.startsWith(p))
 
-  const session = token ? await verifyToken(token) : null
+  let response = NextResponse.next({ request: req })
 
-  // Redirect unauthenticated users away from protected routes
-  if (isProtected && !session) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return req.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+          response = NextResponse.next({ request: req })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (isProtected && !user) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('from', pathname)
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from login/register
-  if (isAuthPage && session) {
+  if (isAuthPage && user) {
     return NextResponse.redirect(new URL('/search', req.url))
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {

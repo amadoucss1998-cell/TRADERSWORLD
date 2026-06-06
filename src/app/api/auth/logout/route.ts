@@ -1,9 +1,7 @@
-import { clearTokenCookie } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST() {
-  const { name, value, options } = clearTokenCookie()
-  return Response.json(
-    { success: true },
-    { headers: { 'Set-Cookie': `${name}=${value}; Path=${(options as Record<string, unknown>).path}; Max-Age=0; HttpOnly; SameSite=Lax` } }
-  )
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  return Response.json({ ok: true })
 }

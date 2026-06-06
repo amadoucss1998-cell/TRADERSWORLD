@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { anthropic, CLAUDE_MODEL } from '@/lib/claude'
 
 const PROMPTS = {
@@ -49,8 +49,9 @@ Write only the statement — no preamble.`,
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { type, profile, scholarship } = await req.json()
 
