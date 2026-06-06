@@ -3,6 +3,7 @@ import { ArrowRight, Search, PenLine, BarChart3, Bell, FileText, LayoutGrid, Che
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { DemoSection } from '@/components/landing/DemoSection'
 
 const FEATURES = [
   { icon: Search, title: 'Smart Search', desc: 'AI finds scholarships matched to your exact profile' },
@@ -75,6 +76,7 @@ export default function LandingPage() {
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-sm text-[#a1a1aa] hover:text-white transition-colors">Features</a>
               <a href="#how-it-works" className="text-sm text-[#a1a1aa] hover:text-white transition-colors">How It Works</a>
+              <a href="#demo" className="text-sm text-green-400 hover:text-green-300 font-medium transition-colors">✨ Try Demo</a>
               <a href="#pricing" className="text-sm text-[#a1a1aa] hover:text-white transition-colors">Pricing</a>
             </div>
             <div className="flex items-center gap-3">
@@ -184,6 +186,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Interactive Demo */}
+      <DemoSection />
 
       {/* Pricing */}
       <section id="pricing" className="py-20 px-4">
