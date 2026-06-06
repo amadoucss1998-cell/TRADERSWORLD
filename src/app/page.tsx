@@ -35,32 +35,6 @@ const TESTIMONIALS = [
   },
 ]
 
-const PLANS = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: '/month',
-    features: ['3 scholarship searches', '1 essay generation', 'Profile builder', 'Basic support'],
-    cta: 'Get Started Free',
-    highlight: false,
-  },
-  {
-    name: 'Student',
-    price: '$5',
-    period: '/month',
-    features: ['Unlimited searches', '10 essays per month', 'CV generator', 'Deadline reminders', 'Priority support'],
-    cta: 'Start Student Plan',
-    highlight: true,
-  },
-  {
-    name: 'Premium',
-    price: '$12',
-    period: '/month',
-    features: ['Everything in Student', 'Unlimited essays', 'AI improvements', 'Smart reminders', 'Application coaching'],
-    cta: 'Go Premium',
-    highlight: false,
-  },
-]
 
 export default function LandingPage() {
   return (
@@ -77,7 +51,6 @@ export default function LandingPage() {
               <a href="#features" className="text-sm text-[#a1a1aa] hover:text-white transition-colors">Features</a>
               <a href="#how-it-works" className="text-sm text-[#a1a1aa] hover:text-white transition-colors">How It Works</a>
               <a href="#demo" className="text-sm text-green-400 hover:text-green-300 font-medium transition-colors">✨ Try Demo</a>
-              <a href="#pricing" className="text-sm text-[#a1a1aa] hover:text-white transition-colors">Pricing</a>
             </div>
             <div className="flex items-center gap-3">
               <Link href="/login">
@@ -190,44 +163,32 @@ export default function LandingPage() {
       {/* Interactive Demo */}
       <DemoSection />
 
-      {/* Pricing */}
-      <section id="pricing" className="py-20 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">Simple, Affordable Pricing</h2>
-            <p className="text-[#a1a1aa]">Start free. Upgrade when you need more.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PLANS.map(plan => (
-              <Card key={plan.name} className={plan.highlight ? 'border-green-600 relative' : ''}>
-                {plan.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-green-600 text-white border-0">Most Popular</Badge>
-                  </div>
-                )}
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">{plan.name}</h3>
-                  <div className="flex items-baseline gap-1 mb-6">
-                    <span className="text-3xl font-bold text-white">{plan.price}</span>
-                    <span className="text-[#a1a1aa] text-sm">{plan.period}</span>
-                  </div>
-                  <ul className="space-y-3 mb-6">
-                    {plan.features.map(f => (
-                      <li key={f} className="flex items-center gap-2 text-sm text-[#a1a1aa]">
-                        <Check className="h-4 w-4 text-green-500 shrink-0" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href="/register">
-                    <Button variant={plan.highlight ? 'default' : 'outline'} className="w-full">
-                      {plan.cta}
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      {/* Free CTA */}
+      <section className="py-20 px-4">
+        <div className="max-w-lg mx-auto">
+          <Card className="border-green-600/40 bg-green-600/5">
+            <CardContent className="p-8 text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-600/20 border border-green-600/30 text-green-400 text-xs font-medium mb-4">
+                100% Free
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Everything is Free</h2>
+              <p className="text-[#a1a1aa] text-sm mb-6">Unlimited scholarship searches, essay generation, CV builder, and application tracking — all free, no credit card needed.</p>
+              <ul className="space-y-2 mb-8 text-left">
+                {['Unlimited scholarship searches', 'Unlimited AI essay generation', 'CV generator', 'Application tracker', 'Deadline reminders', 'Full analytics'].map(f => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-[#a1a1aa]">
+                    <Check className="h-4 w-4 text-green-500 shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/register">
+                <Button size="lg" className="w-full gap-2">
+                  Create Free Account <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <p className="text-xs text-[#71717a] mt-3">No credit card · No limits · Always free</p>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

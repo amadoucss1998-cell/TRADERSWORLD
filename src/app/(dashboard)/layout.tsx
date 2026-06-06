@@ -20,7 +20,7 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const [plan] = useState<'free' | 'student' | 'premium'>('free')
+  const [plan] = useState('free')
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex">
@@ -42,9 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">John Student</p>
-              <Badge variant={plan === 'premium' ? 'success' : plan === 'student' ? 'warning' : 'secondary'} className="text-xs mt-0.5">
-                {plan}
-              </Badge>
+              <Badge variant="success" className="text-xs mt-0.5">Free</Badge>
             </div>
           </div>
         </div>
@@ -68,21 +66,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
-        {/* Upgrade CTA */}
-        {plan === 'free' && (
-          <div className="p-4 border-t border-[#1f1f1f]">
-            <div className="bg-green-600/10 border border-green-600/20 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium text-white">Upgrade to Student</span>
-              </div>
-              <p className="text-xs text-[#a1a1aa] mb-3">Get unlimited searches + 10 essays/month</p>
-              <Button size="sm" className="w-full text-xs">
-                Upgrade — $5/mo
-              </Button>
-            </div>
-          </div>
-        )}
       </aside>
 
       {/* Main content */}

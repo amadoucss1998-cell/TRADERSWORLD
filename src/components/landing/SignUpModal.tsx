@@ -15,17 +15,17 @@ const COPY: Record<SignUpModalProps['reason'], { headline: string; sub: string; 
   save: {
     headline: 'Save this scholarship',
     sub: 'Create a free account to bookmark scholarships, track deadlines, and apply with AI-written essays.',
-    benefit: '✓ Free forever · No credit card needed',
+    benefit: '✓ Completely free · No credit card needed',
   },
   'second-essay': {
     headline: 'Write unlimited essays',
-    sub: 'You\'ve seen how good the AI is. Create a free account to write essays for every scholarship you apply to.',
-    benefit: '✓ 1 free essay · Student plan unlocks 10/month',
+    sub: 'Create a free account to write essays for every scholarship you apply to — no limits.',
+    benefit: '✓ Unlimited essays · Always free',
   },
   'full-results': {
     headline: 'See all your matches',
-    sub: 'Your demo shows 4 scholarships. Sign up free to run a full search — we\'ve found 500+ opportunities for Liberian students.',
-    benefit: '✓ Full search · Match scoring · Deadline alerts',
+    sub: 'Your demo shows 4 scholarships. Sign up free to run a full search — 500+ opportunities for Liberian students.',
+    benefit: '✓ Full search · Match scoring · Deadline alerts · Free',
   },
 }
 
