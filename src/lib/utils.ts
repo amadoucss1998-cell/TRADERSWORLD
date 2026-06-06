@@ -10,9 +10,15 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
+  if (!date) return 'No deadline'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return 'No deadline'
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
 }
 
 export function daysUntil(date: string | Date): number {
-  return Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  if (!date) return 0
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return 0
+  return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 }
