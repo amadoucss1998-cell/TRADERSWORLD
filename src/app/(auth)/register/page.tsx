@@ -113,6 +113,14 @@ function RegisterForm() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
+
+      // Sign in immediately so the session cookie is set
+      await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
       setSuccess(true)
     } catch {
       setError('Network error. Please try again.')
