@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!data?.user) {
-      return Response.json({ error: 'Registration failed. Please try again.' }, { status: 500 })
+      return Response.json({ error: 'User creation returned no data. Check Supabase service role key.' }, { status: 500 })
     }
 
     // Sign in to set session cookie
@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
 
     return Response.json({ user: { id: data.user.id, email, full_name } })
   } catch (err) {
-    console.error('Register error:', err)
-    return Response.json({ error: 'Registration failed. Please try again.' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('Register error:', msg)
+    return Response.json({ error: msg || 'Registration failed. Please try again.' }, { status: 500 })
   }
 }
