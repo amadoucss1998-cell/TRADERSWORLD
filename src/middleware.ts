@@ -9,18 +9,25 @@ export async function middleware(req: NextRequest) {
   const isProtected = PROTECTED.some(p => pathname.startsWith(p))
   const isAuthPage = AUTH_PAGES.some(p => pathname.startsWith(p))
 
-  let response = NextResponse.next({ request: req })
+  // Pass-through if route doesn't need auth check
+  if (!isProtected && !isAuthPage) return NextResponse.next()
+
+  let response = NextResponse.next({ request: { headers: req.headers } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return req.cookies.getAll() },
+        getAll() {
+          return req.cookies.getAll()
+        },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
-          response = NextResponse.next({ request: req })
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+          response = NextResponse.next({ request: { headers: req.headers } })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
         },
       },
     }
@@ -43,5 +50,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon\\.ico).*)'],
 }
