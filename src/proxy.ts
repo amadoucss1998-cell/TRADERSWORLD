@@ -4,12 +4,11 @@ import { createServerClient } from '@supabase/ssr'
 const PROTECTED = ['/search', '/scholarships', '/applications', '/documents', '/profile', '/dashboard']
 const AUTH_PAGES = ['/login', '/register']
 
-export async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   const isProtected = PROTECTED.some(p => pathname.startsWith(p))
   const isAuthPage = AUTH_PAGES.some(p => pathname.startsWith(p))
 
-  // Pass-through if route doesn't need auth check
   if (!isProtected && !isAuthPage) return NextResponse.next()
 
   let response = NextResponse.next({ request: { headers: req.headers } })
