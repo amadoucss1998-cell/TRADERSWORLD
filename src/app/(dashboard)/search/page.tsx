@@ -31,18 +31,23 @@ export default function SearchPage() {
   const [profileLoading, setProfileLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/profile').then(r => r.json()).then(d => d.profile || null),
-      fetch('/api/saved-scholarships').then(r => r.json()).then(d => {
+    // Load profile from localStorage (primary store)
+    const local = localStorage.getItem('sp_profile')
+    if (local) {
+      try { setProfile(JSON.parse(local)) } catch {}
+    }
+    setProfileLoading(false)
+    // Load saved IDs for bookmark state
+    fetch('/api/saved-scholarships')
+      .then(r => r.json())
+      .then(d => {
         const ids = (d.scholarships || []).map((s: Scholarship) => s.id)
         setSavedIds(new Set(ids))
-      }).catch(() => {}),
-    ]).then(([p]) => {
-      setProfile(p)
-    }).catch(() => {}).finally(() => setProfileLoading(false))
+      }).catch(() => {})
   }, [])
 
-  const profileEmpty = !profile || (!profile.field_of_study && !profile.degree_level)
+  // Only block if truly nothing is filled in
+  const profileEmpty = !profile || !profile.field_of_study
 
   async function handleSearch() {
     if (profileEmpty) return
@@ -94,6 +99,11 @@ export default function SearchPage() {
   }
 
   function handleView(id: string) {
+    const scholarship = scholarships.find(s => s.id === id)
+    if (scholarship) {
+      // Store in sessionStorage so detail page can read it without requiring a save
+      sessionStorage.setItem(`sp_scholarship_${id}`, JSON.stringify(scholarship))
+    }
     router.push(`/scholarships/${id}`)
   }
 
