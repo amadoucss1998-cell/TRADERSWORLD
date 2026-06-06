@@ -22,13 +22,17 @@ export async function POST(req: NextRequest) {
 
     const readable = new ReadableStream({
       async start(controller) {
+        const enc = new TextEncoder()
         try {
           for await (const chunk of stream) {
             if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-              controller.enqueue(new TextEncoder().encode(chunk.delta.text))
+              controller.enqueue(enc.encode(chunk.delta.text))
             }
           }
-        } finally {
+          controller.close()
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Improvement failed'
+          controller.enqueue(enc.encode(`\n\nERROR: ${msg}`))
           controller.close()
         }
       },

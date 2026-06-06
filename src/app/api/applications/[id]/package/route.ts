@@ -72,12 +72,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const readable = new ReadableStream({
       async start(controller) {
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            controller.enqueue(new TextEncoder().encode(chunk.delta.text))
+        const enc = new TextEncoder()
+        try {
+          for await (const chunk of stream) {
+            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+              controller.enqueue(enc.encode(chunk.delta.text))
+            }
           }
+          controller.close()
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Generation failed'
+          controller.enqueue(enc.encode(`ERROR: ${msg}`))
+          controller.close()
         }
-        controller.close()
       },
     })
 

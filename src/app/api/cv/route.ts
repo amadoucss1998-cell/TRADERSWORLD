@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
               controller.enqueue(encoder.encode(chunk.delta.text))
             }
           }
-        } finally {
+          controller.close()
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'CV generation failed'
+          controller.enqueue(encoder.encode(`\n\nERROR: ${msg}`))
           controller.close()
         }
       },
