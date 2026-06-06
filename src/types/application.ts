@@ -2,6 +2,7 @@ export interface Application {
   id: string
   user_id: string
   scholarship_id: string
+  scholarship_title?: string
   scholarship?: import('./scholarship').Scholarship
   status: 'drafting' | 'submitted' | 'interview' | 'accepted' | 'rejected'
   deadline: string

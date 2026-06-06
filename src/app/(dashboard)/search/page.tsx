@@ -2,116 +2,14 @@
 
 import React, { useState, useEffect } from 'react'
 import { Search, Loader2, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ScholarshipCard } from '@/components/scholarships/ScholarshipCard'
 import { FilterBar } from '@/components/scholarships/FilterBar'
+import { daysUntil } from '@/lib/utils'
 import type { Scholarship } from '@/types/scholarship'
 import type { Profile } from '@/types/profile'
-
-const MOCK_SCHOLARSHIPS: Scholarship[] = [
-  {
-    id: '1',
-    title: 'MasterCard Foundation Scholars Program',
-    provider: 'MasterCard Foundation',
-    country: 'Various Countries',
-    amount: 'Full Funding',
-    deadline: '2026-03-15',
-    degree_levels: ['undergraduate', 'masters'],
-    fields_of_study: ['All Fields'],
-    eligibility: 'African students with leadership potential and financial need',
-    description: 'The Mastercard Foundation Scholars Program partners with leading universities globally to provide scholarships to young Africans.',
-    url: 'https://mastercardfdn.org/scholars',
-    source: 'Mock',
-    match_score: 92,
-    match_reason: 'Excellent match: open to West African students including Liberia, aligns with your field and financial need criteria.',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    title: 'Commonwealth Scholarship Commission',
-    provider: 'UK Government',
-    country: 'United Kingdom',
-    amount: '$25,000/year',
-    deadline: '2026-04-10',
-    degree_levels: ['masters', 'phd'],
-    fields_of_study: ['All Fields'],
-    eligibility: 'Citizens of Commonwealth nations including Liberia',
-    description: 'Commonwealth Scholarships are for candidates from low and middle income Commonwealth countries.',
-    url: 'https://cscuk.fcdo.gov.uk',
-    source: 'Mock',
-    match_score: 87,
-    match_reason: 'Strong match: Liberia is a Commonwealth nation. Fully funded with stipend.',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    title: 'DAAD Scholarship for Developing Countries',
-    provider: 'German Academic Exchange Service',
-    country: 'Germany',
-    amount: '€934/month',
-    deadline: '2026-02-28',
-    degree_levels: ['masters', 'phd'],
-    fields_of_study: ['Engineering', 'Science', 'Social Sciences'],
-    eligibility: 'Students from developing countries with strong academic record',
-    description: 'DAAD offers a wide variety of scholarship programs for international students to study in Germany.',
-    url: 'https://daad.de',
-    source: 'Mock',
-    match_score: 78,
-    match_reason: 'Good match: open to West African students, monthly stipend plus travel allowance.',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    title: 'Chevening Scholarships',
-    provider: 'UK Foreign Commonwealth Office',
-    country: 'United Kingdom',
-    amount: 'Full Funding',
-    deadline: '2026-11-05',
-    degree_levels: ['masters'],
-    fields_of_study: ['All Fields'],
-    eligibility: 'Liberian citizens with leadership potential, 2+ years work experience',
-    description: 'Chevening is the UK government\'s international awards programme for future leaders.',
-    url: 'https://chevening.org',
-    source: 'Mock',
-    match_score: 85,
-    match_reason: 'Excellent match: specifically open to Liberian citizens. Covers full tuition, living costs, flights.',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    title: 'Fulbright Foreign Student Program',
-    provider: 'US Government',
-    country: 'United States',
-    amount: '$35,000/year',
-    deadline: '2026-05-20',
-    degree_levels: ['masters', 'phd'],
-    fields_of_study: ['All Fields'],
-    eligibility: 'Liberian and West African citizens with academic excellence',
-    description: 'The Fulbright Program is the flagship international educational exchange program sponsored by the U.S. government.',
-    url: 'https://fulbrightprogram.org',
-    source: 'Mock',
-    match_score: 80,
-    match_reason: 'Strong match: Liberia has active Fulbright program. Full funding including living stipend.',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '6',
-    title: 'African Development Bank Scholarship',
-    provider: 'African Development Bank',
-    country: 'Various Countries',
-    amount: '$20,000/year',
-    deadline: '2026-03-31',
-    degree_levels: ['masters'],
-    fields_of_study: ['Economics', 'Finance', 'Development Studies', 'Agriculture'],
-    eligibility: 'African nationals under 35 years, working in development sector',
-    description: 'AfDB scholarship program for young professionals working in African development.',
-    url: 'https://afdb.org/scholarships',
-    source: 'Mock',
-    match_score: 65,
-    match_reason: 'Moderate match: open to Liberian nationals, focused on development-related fields.',
-    created_at: new Date().toISOString(),
-  },
-]
 
 const DEFAULT_FILTERS = {
   degree_level: 'all',
@@ -121,67 +19,90 @@ const DEFAULT_FILTERS = {
 }
 
 export default function SearchPage() {
-  const [scholarships, setScholarships] = useState<Scholarship[]>(MOCK_SCHOLARSHIPS)
+  const router = useRouter()
+  const [scholarships, setScholarships] = useState<Scholarship[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [profile, setProfile] = useState<Partial<Profile> | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem('scholarpath_profile')
-    if (saved) setProfile(JSON.parse(saved))
-    const savedScholarships = localStorage.getItem('scholarpath_saved')
-    if (savedScholarships) setSavedIds(new Set(JSON.parse(savedScholarships)))
+    Promise.all([
+      fetch('/api/profile').then(r => r.json()).then(d => d.profile || null),
+      fetch('/api/saved-scholarships').then(r => r.json()).then(d => {
+        const ids = (d.scholarships || []).map((s: Scholarship) => s.id)
+        setSavedIds(new Set(ids))
+      }).catch(() => {}),
+    ]).then(([p]) => {
+      setProfile(p)
+    }).catch(() => {}).finally(() => setProfileLoading(false))
   }, [])
 
+  const profileEmpty = !profile || (!profile.field_of_study && !profile.degree_level)
+
   async function handleSearch() {
+    if (profileEmpty) return
     setLoading(true)
     setSearched(true)
+    setError(null)
     try {
       const res = await fetch('/api/scholarships/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: profile || { field_of_study: 'General', degree_level: 'undergraduate', nationality: 'Liberian', gpa: 3.0 },
-          filters,
-        }),
+        body: JSON.stringify({ profile, filters }),
       })
-      if (res.ok) {
+      if (!res.ok) {
         const data = await res.json()
-        if (data.scholarships?.length > 0) {
-          setScholarships(data.scholarships)
-        } else {
-          // Keep mock data if API returns empty
-          setScholarships(MOCK_SCHOLARSHIPS)
-        }
+        setError(data.error || 'Search failed. Please try again.')
+        setScholarships([])
+        return
       }
+      const data = await res.json()
+      setScholarships(data.scholarships || [])
     } catch {
-      // Keep mock data on error
-      setScholarships(MOCK_SCHOLARSHIPS)
+      setError('Network error. Please check your connection and try again.')
+      setScholarships([])
     } finally {
       setLoading(false)
     }
   }
 
-  function handleSave(id: string) {
-    setSavedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      localStorage.setItem('scholarpath_saved', JSON.stringify([...next]))
-      return next
-    })
+  async function handleSave(id: string) {
+    const scholarship = scholarships.find(s => s.id === id)
+    if (!scholarship) return
+    const alreadySaved = savedIds.has(id)
+    if (alreadySaved) {
+      await fetch('/api/saved-scholarships', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scholarshipId: id }),
+      })
+      setSavedIds(prev => { const next = new Set(prev); next.delete(id); return next })
+    } else {
+      await fetch('/api/saved-scholarships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scholarship }),
+      })
+      setSavedIds(prev => new Set([...prev, id]))
+    }
   }
 
   function handleView(id: string) {
-    window.location.href = `/scholarships/${id}`
+    router.push(`/scholarships/${id}`)
   }
 
   const filtered = scholarships.filter(s => {
     if (filters.degree_level !== 'all' && !s.degree_levels.includes(filters.degree_level)) return false
     if (filters.field_of_study && !s.fields_of_study.some(f => f.toLowerCase().includes(filters.field_of_study.toLowerCase()))) return false
     if (filters.country && !s.country.toLowerCase().includes(filters.country.toLowerCase())) return false
+    if (filters.deadline_range !== 'all') {
+      const days = daysUntil(s.deadline)
+      if (days > parseInt(filters.deadline_range)) return false
+    }
     return true
   })
 
@@ -195,27 +116,43 @@ export default function SearchPage() {
       {/* Search Section */}
       <div className="mb-6 p-6 rounded-xl bg-[#111111] border border-[#1f1f1f]">
         <div className="text-center mb-6">
-          <h2 className="text-lg font-semibold text-white mb-2">🔍 Find Scholarships For Me</h2>
+          <h2 className="text-lg font-semibold text-white mb-2">Find Scholarships For Me</h2>
           <p className="text-sm text-[#a1a1aa]">
             Claude + Tavily will search hundreds of scholarships and rank them by your match score.
-            {!profile && ' Complete your profile first for better matches.'}
           </p>
         </div>
-        <div className="flex justify-center">
-          <Button size="lg" onClick={handleSearch} disabled={loading} className="gap-2 px-10">
-            {loading ? (
-              <><Loader2 className="h-5 w-5 animate-spin" /> Searching...</>
-            ) : (
-              <><Sparkles className="h-5 w-5" /> Find My Scholarships</>
-            )}
-          </Button>
-        </div>
+
+        {!profileLoading && profileEmpty ? (
+          <div className="text-center py-4">
+            <p className="text-yellow-400 text-sm mb-3">Complete your profile to get personalized scholarship matches.</p>
+            <Link href="/profile">
+              <Button variant="outline">Complete Your Profile</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <Button size="lg" onClick={handleSearch} disabled={loading || profileLoading} className="gap-2 px-10">
+              {loading ? (
+                <><Loader2 className="h-5 w-5 animate-spin" /> Searching...</>
+              ) : (
+                <><Sparkles className="h-5 w-5" /> Find My Scholarships</>
+              )}
+            </Button>
+          </div>
+        )}
+
         {searched && (
           <p className="text-center text-xs text-[#71717a] mt-3">
             Powered by Claude AI + Tavily Search
           </p>
         )}
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 rounded-lg bg-red-600/10 border border-red-600/20 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mb-6">
@@ -232,7 +169,7 @@ export default function SearchPage() {
       )}
 
       {/* Results */}
-      {!loading && (
+      {!loading && searched && (
         <>
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-[#a1a1aa]">
@@ -256,10 +193,19 @@ export default function SearchPage() {
           {filtered.length === 0 && (
             <div className="text-center py-16 text-[#71717a]">
               <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>No scholarships match your filters. Try clearing some filters.</p>
+              <p className="text-white font-medium mb-2">No scholarships found</p>
+              <p className="text-sm">Try clearing some filters or searching again.</p>
             </div>
           )}
         </>
+      )}
+
+      {!loading && !searched && (
+        <div className="text-center py-20 text-[#71717a]">
+          <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
+          <p className="text-white font-medium mb-2">Ready to find scholarships</p>
+          <p className="text-sm">Click &ldquo;Find My Scholarships&rdquo; to search with your profile.</p>
+        </div>
       )}
     </div>
   )

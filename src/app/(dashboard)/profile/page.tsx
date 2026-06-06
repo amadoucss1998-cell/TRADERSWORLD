@@ -44,35 +44,68 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Partial<Profile>>(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [extracurricularsText, setExtracurricularsText] = useState('')
+  const [toast, setToast] = useState<string | null>(null)
 
-  // Load from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('scholarpath_profile')
-    if (saved) {
-      const p = JSON.parse(saved)
-      setProfile(p)
-      setExtracurricularsText((p.extracurriculars || []).join(', '))
-    }
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(data => {
+        if (data.profile) {
+          setProfile({ ...DEFAULT_PROFILE, ...data.profile })
+          setExtracurricularsText((data.profile.extracurriculars || []).join(', '))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
   function update(key: keyof Profile, value: unknown) {
     setProfile(prev => ({ ...prev, [key]: value }))
   }
 
-  function saveProfile() {
+  async function saveProfile() {
     setSaving(true)
     const updated = { ...profile, extracurriculars: extracurricularsText.split(',').map(s => s.trim()).filter(Boolean) }
-    localStorage.setItem('scholarpath_profile', JSON.stringify(updated))
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      })
+      setToast('Profile saved successfully!')
+      setSaved(true)
+      setTimeout(() => { setSaved(false); setToast(null) }, 3000)
+    } catch {
+      setToast('Failed to save. Please try again.')
+      setTimeout(() => setToast(null), 3000)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const progress = ((step + 1) / STEPS.length) * 100
 
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="h-8 w-48 bg-[#1f1f1f] rounded animate-pulse mb-4" />
+        <div className="h-64 bg-[#111111] border border-[#1f1f1f] rounded-xl animate-pulse" />
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-6">
+      {toast && (
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+          toast.includes('Failed') ? 'bg-red-600/20 border border-red-600/30 text-red-400' : 'bg-green-600/20 border border-green-600/30 text-green-400'
+        }`}>
+          {toast}
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Complete Your Profile</h1>
         <p className="text-[#a1a1aa] text-sm">AI uses your profile to find matching scholarships and write personalized essays.</p>
@@ -262,7 +295,7 @@ export default function ProfilePage() {
                   Next <ChevronRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={() => { saveProfile(); router.push('/search') }}>
+                <Button onClick={async () => { await saveProfile(); router.push('/search') }}>
                   Find Scholarships <ChevronRight className="h-4 w-4" />
                 </Button>
               )}

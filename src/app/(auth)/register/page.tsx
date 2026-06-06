@@ -1,22 +1,28 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    const emailParam = searchParams.get('email')
+    if (emailParam) setEmail(decodeURIComponent(emailParam))
+  }, [searchParams])
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -38,6 +44,69 @@ export default function RegisterPage() {
       setLoading(false)
     }
   }
+
+  return (
+    <form onSubmit={handleRegister} className="space-y-4">
+      {error && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-md p-3 text-sm text-red-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Full Name</Label>
+        <Input
+          id="fullName"
+          type="text"
+          placeholder="Amara Kamara"
+          value={fullName}
+          onChange={e => setFullName(e.target.value)}
+          required
+          autoComplete="name"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="Min. 8 characters"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          minLength={8}
+          autoComplete="new-password"
+        />
+      </div>
+
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</> : 'Create Free Account'}
+      </Button>
+
+      <p className="text-xs text-center text-[#71717a]">
+        No credit card · No limits · Always free
+      </p>
+    </form>
+  )
+}
+
+export default function RegisterPage() {
+  const [success, setSuccess] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
@@ -62,62 +131,9 @@ export default function RegisterPage() {
                 <p className="text-sm text-[#a1a1aa]">Redirecting to your profile…</p>
               </div>
             ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                {error && (
-                  <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-md p-3 text-sm text-red-400">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    {error}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="Amara Kamara"
-                    value={fullName}
-                    onChange={e => setFullName(e.target.value)}
-                    required
-                    autoComplete="name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Min. 8 characters"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                    minLength={8}
-                    autoComplete="new-password"
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</> : 'Create Free Account'}
-                </Button>
-
-                <p className="text-xs text-center text-[#71717a]">
-                  No credit card · No limits · Always free
-                </p>
-              </form>
+              <Suspense fallback={<div className="h-48 animate-pulse bg-[#111] rounded" />}>
+                <RegisterForm />
+              </Suspense>
             )}
 
             {!success && (

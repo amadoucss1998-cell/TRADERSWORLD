@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Upload, FileText, Trash2, Download, CheckCircle } from 'lucide-react'
+import React, { useState, useRef } from 'react'
+import { Upload, FileText, Trash2, Download, CheckCircle, Sparkles, X, Copy, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,13 +13,8 @@ interface UploadedFile {
   size: string
   uploaded_at: string
   url: string
+  objectUrl?: string
 }
-
-const MOCK_FILES: UploadedFile[] = [
-  { id: '1', name: 'John_Doe_CV.pdf', type: 'cv', size: '245 KB', uploaded_at: '2025-12-01', url: '#' },
-  { id: '2', name: 'University_Transcript.pdf', type: 'transcript', size: '1.2 MB', uploaded_at: '2025-12-01', url: '#' },
-  { id: '3', name: 'Recommendation_Prof_Williams.pdf', type: 'recommendation', size: '180 KB', uploaded_at: '2025-12-05', url: '#' },
-]
 
 const TYPE_COLORS: Record<string, 'success' | 'warning' | 'secondary' | 'default'> = {
   cv: 'success',
@@ -36,9 +31,62 @@ const DOCUMENT_TYPES = [
 ]
 
 export default function DocumentsPage() {
-  const [files, setFiles] = useState<UploadedFile[]>(MOCK_FILES)
+  const [files, setFiles] = useState<UploadedFile[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
+
+  // CV Generator state
+  const [cvGenerating, setCvGenerating] = useState(false)
+  const [cvText, setCvText] = useState('')
+  const [showCvModal, setShowCvModal] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleGenerateCV() {
+    setCvGenerating(true)
+    setShowCvModal(true)
+    setCvText('')
+    try {
+      const profileRes = await fetch('/api/profile')
+      const profileData = await profileRes.json()
+      const res = await fetch('/api/cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: profileData.profile || {}, target_field: 'scholarship' }),
+      })
+      if (!res.ok || !res.body) throw new Error('Failed to generate CV')
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let done = false
+      while (!done) {
+        const { value, done: d } = await reader.read()
+        done = d
+        if (value) setCvText(prev => prev + decoder.decode(value))
+      }
+    } catch {
+      setCvText('Failed to generate CV. Please ensure your profile is complete and try again.')
+    } finally {
+      setCvGenerating(false)
+    }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(cvText).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function handleDownloadCV() {
+    const blob = new Blob([cvText], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'ScholarPath_CV.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()
@@ -57,7 +105,6 @@ export default function DocumentsPage() {
 
   function handleFileUpload(fileList: FileList) {
     setUploading(true)
-    // Simulate upload
     const newFiles: UploadedFile[] = Array.from(fileList).map(f => ({
       id: crypto.randomUUID(),
       name: f.name,
@@ -66,24 +113,74 @@ export default function DocumentsPage() {
             f.name.toLowerCase().includes('rec') || f.name.toLowerCase().includes('letter') ? 'recommendation' : 'other',
       size: `${(f.size / 1024).toFixed(0)} KB`,
       uploaded_at: new Date().toISOString().split('T')[0],
-      url: '#',
+      url: '',
+      objectUrl: URL.createObjectURL(f),
     }))
     setTimeout(() => {
       setFiles(prev => [...prev, ...newFiles])
       setUploading(false)
-    }, 1500)
+    }, 500)
   }
 
   function handleDelete(id: string) {
-    setFiles(prev => prev.filter(f => f.id !== id))
+    setFiles(prev => {
+      const f = prev.find(x => x.id === id)
+      if (f?.objectUrl) URL.revokeObjectURL(f.objectUrl)
+      return prev.filter(x => x.id !== id)
+    })
   }
 
   return (
     <div className="p-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Documents</h1>
-        <p className="text-[#a1a1aa] text-sm">Upload and manage your application documents</p>
+        <p className="text-[#a1a1aa] text-sm">Generate your CV with AI and manage your application documents</p>
       </div>
+
+      {/* CV Generator Section */}
+      <div className="mb-8 p-6 rounded-xl bg-[#111111] border border-[#1f1f1f]">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-white font-semibold mb-1">AI CV Generator</h2>
+            <p className="text-sm text-[#a1a1aa]">Generate a professional scholarship CV based on your profile.</p>
+          </div>
+          <Button onClick={handleGenerateCV} disabled={cvGenerating} className="gap-2">
+            {cvGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Generate CV with AI
+          </Button>
+        </div>
+      </div>
+
+      {/* CV Modal */}
+      {showCvModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowCvModal(false)} />
+          <div className="relative w-full max-w-2xl bg-[#111111] border border-[#2a2a2a] rounded-2xl p-6 shadow-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold">Generated CV</h3>
+              <button onClick={() => setShowCvModal(false)} className="text-[#71717a] hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-[#0a0a0a] rounded-lg p-4 mb-4 border border-[#1f1f1f]">
+              {cvGenerating && !cvText && (
+                <div className="flex items-center gap-2 text-[#71717a]">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Generating your CV...
+                </div>
+              )}
+              <pre className="text-sm text-[#a1a1aa] whitespace-pre-wrap font-mono">{cvText}</pre>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleCopy} disabled={!cvText} className="gap-2">
+                <Copy className="h-4 w-4" /> {copied ? 'Copied!' : 'Copy to Clipboard'}
+              </Button>
+              <Button onClick={handleDownloadCV} disabled={!cvText || cvGenerating} className="gap-2">
+                <Download className="h-4 w-4" /> Download as .txt
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload Area */}
       <div
@@ -97,22 +194,19 @@ export default function DocumentsPage() {
         <Upload className="h-10 w-10 text-[#71717a] mx-auto mb-4" />
         <p className="text-white font-medium mb-1">Drag & drop files here</p>
         <p className="text-sm text-[#a1a1aa] mb-4">Supports PDF, DOCX, JPG, PNG up to 10MB</p>
-        <label>
-          <Button variant="outline" disabled={uploading} asChild>
-            <span>
-              {uploading ? 'Uploading...' : 'Browse Files'}
-            </span>
-          </Button>
-          <input
-            type="file"
-            className="hidden"
-            multiple
-            accept=".pdf,.docx,.jpg,.png"
-            onChange={e => e.target.files && handleFileUpload(e.target.files)}
-          />
-        </label>
+        <Button variant="outline" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+          {uploading ? 'Uploading...' : 'Browse Files'}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          accept=".pdf,.docx,.jpg,.png"
+          onChange={e => e.target.files && handleFileUpload(e.target.files)}
+        />
         <p className="text-xs text-[#71717a] mt-3">
-          Note: File storage requires Supabase Storage. Currently showing mock uploaded files.
+          Files stored locally in your browser session. For permanent storage, connect Supabase Storage.
         </p>
       </div>
 
@@ -150,13 +244,17 @@ export default function DocumentsPage() {
                 <div className="flex items-center gap-3 mt-1">
                   <Badge variant={TYPE_COLORS[file.type] || 'secondary'} className="text-xs">{file.type}</Badge>
                   <span className="text-xs text-[#71717a]">{file.size}</span>
-                  <span className="text-xs text-[#71717a]">Uploaded {file.uploaded_at}</span>
+                  <span className="text-xs text-[#71717a]">Added {file.uploaded_at}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => window.open(file.url, '_blank')}>
-                  <Download className="h-4 w-4" />
-                </Button>
+                {file.objectUrl && (
+                  <Button variant="ghost" size="icon" asChild>
+                    <a href={file.objectUrl} download={file.name}>
+                      <Download className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" onClick={() => handleDelete(file.id)}>
                   <Trash2 className="h-4 w-4 text-red-400" />
                 </Button>
@@ -167,6 +265,7 @@ export default function DocumentsPage() {
             <div className="text-center py-10 text-[#71717a]">
               <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>No documents uploaded yet</p>
+              <p className="text-xs mt-1">Files added this session will appear here</p>
             </div>
           )}
         </div>

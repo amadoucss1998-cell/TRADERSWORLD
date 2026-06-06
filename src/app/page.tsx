@@ -244,9 +244,8 @@ export default function LandingPage() {
             Built for Liberian students, powered by Claude AI + Tavily Search.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-sm text-[#71717a] hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="text-sm text-[#71717a] hover:text-white transition-colors">Terms</a>
-            <a href="#" className="text-sm text-[#71717a] hover:text-white transition-colors">Contact</a>
+            <Link href="/privacy" className="text-sm text-[#71717a] hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms" className="text-sm text-[#71717a] hover:text-white transition-colors">Terms</Link>
           </div>
         </div>
       </footer>

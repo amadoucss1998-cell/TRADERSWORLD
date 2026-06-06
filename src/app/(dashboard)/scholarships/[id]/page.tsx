@@ -1,65 +1,78 @@
 'use client'
 
-import React from 'react'
-import { use } from 'react'
-import { ArrowLeft, Calendar, DollarSign, Globe, GraduationCap, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
+import React, { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { ArrowLeft, Calendar, DollarSign, Globe, GraduationCap, ArrowRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { daysUntil, formatDate } from '@/lib/utils'
+import type { Scholarship } from '@/types/scholarship'
 
-// Mock data for demo
-const MOCK_SCHOLARSHIPS: Record<string, {
-  id: string; title: string; provider: string; country: string; amount: string;
-  deadline: string; degree_levels: string[]; fields_of_study: string[]; eligibility: string;
-  description: string; url: string; match_score: number; match_reason: string;
-}> = {
-  '1': {
-    id: '1',
-    title: 'MasterCard Foundation Scholars Program',
-    provider: 'MasterCard Foundation',
-    country: 'Various Countries',
-    amount: 'Full Funding (tuition + living + travel)',
-    deadline: '2026-03-15',
-    degree_levels: ['undergraduate', 'masters'],
-    fields_of_study: ['All Fields'],
-    eligibility: 'African students with demonstrated leadership potential, financial need, and commitment to giving back to Africa.',
-    description: 'The Mastercard Foundation Scholars Program partners with leading universities globally to provide scholarships to young Africans who demonstrate academic excellence, leadership potential, and financial need. Scholars receive comprehensive support including academic mentoring, leadership development, and career services.',
-    url: 'https://mastercardfdn.org/scholars',
-    match_score: 92,
-    match_reason: 'Excellent match: open to West African students including Liberia, aligns with financial need and leadership criteria.',
-  },
-  '4': {
-    id: '4',
-    title: 'Chevening Scholarships',
-    provider: 'UK Foreign Commonwealth Office',
-    country: 'United Kingdom',
-    amount: 'Full Funding (tuition + living + flights + visa)',
-    deadline: '2026-11-05',
-    degree_levels: ['masters'],
-    fields_of_study: ['All Fields'],
-    eligibility: 'Liberian citizens with at least 2 years of work experience, leadership qualities, and commitment to return to Liberia.',
-    description: 'Chevening is the UK government\'s international awards programme aimed at developing global leaders. Funded by the UK Foreign, Commonwealth and Development Office, Chevening Scholarships are awarded to individuals who demonstrate strong academic backgrounds, leadership skills, and the potential to become future leaders.',
-    url: 'https://chevening.org',
-    match_score: 85,
-    match_reason: 'Excellent match: specifically open to Liberian citizens with leadership potential.',
-  },
-}
+export default function ScholarshipDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const id = params.id as string
+  const [scholarship, setScholarship] = useState<Scholarship | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
-export default function ScholarshipDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  const scholarship = MOCK_SCHOLARSHIPS[id] || MOCK_SCHOLARSHIPS['1']
+  useEffect(() => {
+    fetch('/api/saved-scholarships')
+      .then(r => r.json())
+      .then(data => {
+        const found = (data.scholarships || []).find((s: Scholarship) => s.id === id)
+        if (found) setScholarship(found)
+        else setNotFound(true)
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  async function handleStartApplication() {
+    if (!scholarship) return
+    await fetch('/api/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scholarship_id: scholarship.id,
+        scholarship_title: scholarship.title,
+        deadline: scholarship.deadline,
+        essay_prompt: '',
+        word_limit: 650,
+      }),
+    })
+    router.push('/applications')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-[#71717a]" />
+      </div>
+    )
+  }
+
+  if (notFound || !scholarship) {
+    return (
+      <div className="p-6 text-center py-20">
+        <p className="text-white font-medium mb-2">Scholarship not found</p>
+        <p className="text-[#71717a] text-sm mb-6">This scholarship may have been removed from your saved list.</p>
+        <Button onClick={() => router.push('/scholarships')}>
+          <ArrowLeft className="h-4 w-4" /> Back to Saved
+        </Button>
+      </div>
+    )
+  }
+
   const days = daysUntil(scholarship.deadline)
 
   return (
     <div className="p-6 max-w-4xl">
       <div className="mb-6">
-        <Link href="/scholarships">
-          <Button variant="ghost" size="sm" className="mb-4">
-            <ArrowLeft className="h-4 w-4" /> Back to Saved
-          </Button>
-        </Link>
+        <Button variant="ghost" size="sm" className="mb-4" onClick={() => router.push('/scholarships')}>
+          <ArrowLeft className="h-4 w-4" /> Back to Saved
+        </Button>
 
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -67,12 +80,14 @@ export default function ScholarshipDetailPage({ params }: { params: Promise<{ id
             <div className="flex items-center gap-3 text-sm text-[#a1a1aa]">
               <span>{scholarship.provider}</span>
               <span>·</span>
-              <span>🌍 {scholarship.country}</span>
+              <span>{scholarship.country}</span>
             </div>
           </div>
-          <Badge variant={scholarship.match_score >= 70 ? 'success' : 'warning'} className="text-lg px-4 py-1.5">
-            {scholarship.match_score}% Match
-          </Badge>
+          {scholarship.match_score != null && (
+            <Badge variant={scholarship.match_score >= 70 ? 'success' : 'warning'} className="text-lg px-4 py-1.5">
+              {scholarship.match_score}% Match
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -155,7 +170,7 @@ export default function ScholarshipDetailPage({ params }: { params: Promise<{ id
             </CardContent>
           </Card>
 
-          <Button className="w-full gap-2" onClick={() => window.location.href = `/applications`}>
+          <Button className="w-full gap-2" onClick={handleStartApplication}>
             Start Application <ArrowRight className="h-4 w-4" />
           </Button>
 
