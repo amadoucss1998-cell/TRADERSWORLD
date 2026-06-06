@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Search, Bookmark, FileText, FolderOpen, Settings, Zap } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { LayoutDashboard, Search, Bookmark, FileText, FolderOpen, Settings, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 
@@ -20,7 +19,25 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const [plan] = useState('free')
+  const router = useRouter()
+  const [user, setUser] = useState<{ email: string; full_name: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(d => { if (d.user) setUser(d.user) })
+      .catch(() => {})
+  }, [])
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+    router.refresh()
+  }
+
+  const initials = user?.full_name
+    ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'SP'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex">
@@ -38,11 +55,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 border-b border-[#1f1f1f]">
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarFallback>JS</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">John Student</p>
-              <Badge variant="success" className="text-xs mt-0.5">Free</Badge>
+              <p className="text-sm font-medium text-white truncate">
+                {user?.full_name ?? 'Loading…'}
+              </p>
+              <p className="text-xs text-[#71717a] truncate">{user?.email}</p>
             </div>
           </div>
         </div>
@@ -66,6 +85,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
+        {/* Logout */}
+        <div className="p-3 border-t border-[#1f1f1f]">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm text-[#a1a1aa] hover:text-red-400 hover:bg-red-500/5 transition-colors"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Sign Out
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}

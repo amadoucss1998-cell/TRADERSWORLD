@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { createClient } from '@/lib/supabase/client'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -24,20 +23,17 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
     try {
-      const supabase = createClient()
-      const { error: err } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, full_name: fullName }),
       })
-      if (err) {
-        setError(err.message)
-      } else {
-        setSuccess(true)
-        setTimeout(() => router.push('/profile'), 2000)
-      }
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); return }
+      setSuccess(true)
+      setTimeout(() => router.push('/profile'), 1500)
     } catch {
-      setError('An unexpected error occurred. Please check your Supabase credentials.')
+      setError('Network error. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -60,10 +56,10 @@ export default function RegisterPage() {
           </CardHeader>
           <CardContent>
             {success ? (
-              <div className="text-center py-4">
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                <p className="text-white font-medium">Account created!</p>
-                <p className="text-sm text-[#a1a1aa] mt-1">Redirecting to complete your profile...</p>
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <CheckCircle className="h-10 w-10 text-green-500" />
+                <p className="font-medium text-white">Account created!</p>
+                <p className="text-sm text-[#a1a1aa]">Redirecting to your profile…</p>
               </div>
             ) : (
               <form onSubmit={handleRegister} className="space-y-4">
@@ -79,10 +75,11 @@ export default function RegisterPage() {
                   <Input
                     id="fullName"
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="Amara Kamara"
                     value={fullName}
                     onChange={e => setFullName(e.target.value)}
                     required
+                    autoComplete="name"
                   />
                 </div>
 
@@ -95,6 +92,7 @@ export default function RegisterPage() {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                   />
                 </div>
 
@@ -108,23 +106,30 @@ export default function RegisterPage() {
                     onChange={e => setPassword(e.target.value)}
                     required
                     minLength={8}
+                    autoComplete="new-password"
                   />
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating account...</> : 'Create Free Account'}
+                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</> : 'Create Free Account'}
                 </Button>
+
+                <p className="text-xs text-center text-[#71717a]">
+                  No credit card · No limits · Always free
+                </p>
               </form>
             )}
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-[#a1a1aa]">
-                Already have an account?{' '}
-                <Link href="/login" className="text-green-500 hover:text-green-400 font-medium">
-                  Sign in
-                </Link>
-              </p>
-            </div>
+            {!success && (
+              <div className="mt-6 text-center">
+                <p className="text-sm text-[#a1a1aa]">
+                  Already have an account?{' '}
+                  <Link href="/login" className="text-green-500 hover:text-green-400 font-medium">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

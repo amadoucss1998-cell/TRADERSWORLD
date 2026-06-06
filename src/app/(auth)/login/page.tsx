@@ -1,17 +1,17 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { createClient } from '@/lib/supabase/client'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const params = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -22,15 +22,17 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const supabase = createClient()
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      if (err) {
-        setError(err.message)
-      } else {
-        router.push('/search')
-      }
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); return }
+      router.push(params.get('from') ?? '/search')
+      router.refresh()
     } catch {
-      setError('An unexpected error occurred. Please check your Supabase credentials.')
+      setError('Network error. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -87,7 +89,7 @@ export default function LoginPage() {
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</> : 'Sign In'}
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</> : 'Sign In'}
               </Button>
             </form>
 
@@ -99,15 +101,17 @@ export default function LoginPage() {
                 </Link>
               </p>
             </div>
-
-            <div className="mt-4 p-3 bg-[#0a0a0a] rounded-md border border-[#1f1f1f]">
-              <p className="text-xs text-[#71717a] text-center">
-                Note: Real authentication requires valid Supabase credentials. Set up your <code className="text-green-500">.env.local</code> to enable auth.
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
