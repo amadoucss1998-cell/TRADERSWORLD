@@ -16,13 +16,14 @@ import { formatDate, daysUntil } from '@/lib/utils'
 import type { Application, EssayVersion } from '@/types/application'
 import type { Profile } from '@/types/profile'
 
-type AppStatus = 'draft' | 'submitted' | 'accepted' | 'rejected'
+type AppStatus = 'drafting' | 'submitted' | 'interview' | 'accepted' | 'rejected'
 
 const STATUS_OPTIONS: { value: AppStatus; label: string; icon: React.ElementType; color: string; bg: string; border: string }[] = [
-  { value: 'draft',     label: 'Draft',     icon: PenLine,   color: 'text-[#a1a1aa]', bg: 'bg-[#1f1f1f]',      border: 'border-[#2a2a2a]' },
-  { value: 'submitted', label: 'Submitted', icon: Send,      color: 'text-blue-400',  bg: 'bg-blue-500/10',    border: 'border-blue-500/30' },
-  { value: 'accepted',  label: 'Accepted',  icon: Trophy,    color: 'text-green-400', bg: 'bg-green-500/10',   border: 'border-green-500/30' },
-  { value: 'rejected',  label: 'Rejected',  icon: XCircle,   color: 'text-red-400',   bg: 'bg-red-500/10',     border: 'border-red-500/30' },
+  { value: 'drafting',  label: 'Drafting',  icon: PenLine,   color: 'text-[#a1a1aa]', bg: 'bg-[#1f1f1f]',       border: 'border-[#2a2a2a]' },
+  { value: 'submitted', label: 'Submitted', icon: Send,      color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30' },
+  { value: 'interview', label: 'Interview', icon: User,      color: 'text-yellow-400',bg: 'bg-yellow-500/10',   border: 'border-yellow-500/30' },
+  { value: 'accepted',  label: 'Accepted',  icon: Trophy,    color: 'text-green-400', bg: 'bg-green-500/10',    border: 'border-green-500/30' },
+  { value: 'rejected',  label: 'Rejected',  icon: XCircle,   color: 'text-red-400',   bg: 'bg-red-500/10',      border: 'border-red-500/30' },
 ]
 
 type Tab = 'essay' | 'cv' | 'cover_letter' | 'personal_statement' | 'checklist'
@@ -113,7 +114,7 @@ export default function ApplicationEditorPage() {
     if (newStatus === 'submitted' && submittedDate) fields.deadline = submittedDate
     if (statusNote) fields.notes = statusNote
     await patchApplication(fields)
-    setApp(prev => prev ? { ...prev, status: newStatus } : prev)
+    setApp(prev => prev ? { ...prev, status: newStatus as Application['status'] } : prev)
     setShowStatusModal(false)
     setStatusNote('')
     setSubmittedDate('')
@@ -242,7 +243,8 @@ export default function ApplicationEditorPage() {
             {app.status === 'accepted' && <Trophy className="h-3 w-3" />}
             {app.status === 'rejected' && <XCircle className="h-3 w-3" />}
             {app.status === 'submitted' && <Send className="h-3 w-3" />}
-            {app.status === 'draft' && <PenLine className="h-3 w-3" />}
+            {app.status === 'interview' && <User className="h-3 w-3" />}
+            {app.status === 'drafting' && <PenLine className="h-3 w-3" />}
             {app.status}
             <ChevronDown className="h-3 w-3 ml-0.5" />
           </button>
@@ -485,7 +487,7 @@ export default function ApplicationEditorPage() {
               </div>
 
               {/* Submitted date picker */}
-              {app.status !== 'draft' && (
+              {app.status !== 'drafting' && (
                 <div>
                   <label className="text-xs text-[#71717a] block mb-1.5">
                     {app.status === 'submitted' ? 'Date Submitted' : app.status === 'accepted' || app.status === 'rejected' ? 'Decision Date' : 'Date'}
@@ -518,13 +520,26 @@ export default function ApplicationEditorPage() {
 
               {/* Quick actions */}
               <div className="flex gap-2 pt-1">
-                {app.status === 'draft' && (
+                {app.status === 'drafting' && (
                   <Button className="flex-1 gap-2" onClick={() => updateStatus('submitted')} disabled={updatingStatus}>
                     {updatingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     Mark as Submitted
                   </Button>
                 )}
                 {app.status === 'submitted' && (
+                  <>
+                    <Button className="flex-1 gap-2" onClick={() => updateStatus('interview')} disabled={updatingStatus}>
+                      <User className="h-4 w-4" /> Got Interview
+                    </Button>
+                    <Button className="flex-1 gap-2 bg-green-700 hover:bg-green-600" onClick={() => updateStatus('accepted')} disabled={updatingStatus}>
+                      <Trophy className="h-4 w-4" /> Accepted!
+                    </Button>
+                    <Button variant="outline" className="flex-1 gap-2 border-red-500/30 text-red-400 hover:bg-red-500/10" onClick={() => updateStatus('rejected')} disabled={updatingStatus}>
+                      <XCircle className="h-4 w-4" /> Rejected
+                    </Button>
+                  </>
+                )}
+                {app.status === 'interview' && (
                   <>
                     <Button className="flex-1 gap-2 bg-green-700 hover:bg-green-600" onClick={() => updateStatus('accepted')} disabled={updatingStatus}>
                       <Trophy className="h-4 w-4" /> Accepted!
@@ -535,7 +550,7 @@ export default function ApplicationEditorPage() {
                   </>
                 )}
                 {(app.status === 'accepted' || app.status === 'rejected') && (
-                  <Button variant="outline" className="flex-1 gap-2" onClick={() => updateStatus('draft')} disabled={updatingStatus}>
+                  <Button variant="outline" className="flex-1 gap-2" onClick={() => updateStatus('drafting')} disabled={updatingStatus}>
                     <RotateCcw className="h-4 w-4" /> Reset to Draft
                   </Button>
                 )}
