@@ -24,6 +24,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isCurated, setIsCurated] = useState(false)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [profile, setProfile] = useState<Partial<Profile> | null>(null)
@@ -62,6 +63,7 @@ export default function SearchPage() {
       }
       const data = await res.json()
       setScholarships(data.scholarships || [])
+      setIsCurated(!!data.demo)
     } catch {
       setError('Network error. Please check your connection and try again.')
       setScholarships([])
@@ -151,6 +153,15 @@ export default function SearchPage() {
       {error && (
         <div className="mb-6 p-4 rounded-lg bg-red-600/10 border border-red-600/20 text-red-400 text-sm">
           {error}
+        </div>
+      )}
+
+      {isCurated && !error && searched && (
+        <div className="mb-6 p-4 rounded-lg bg-yellow-600/10 border border-yellow-600/20 text-yellow-400 text-sm flex items-start gap-2">
+          <span className="shrink-0 mt-0.5">⚠️</span>
+          <span>
+            Showing curated scholarships — Tavily API key not configured. Add <code className="bg-yellow-600/10 px-1 rounded">TAVILY_API_KEY</code> to your environment variables for live search results.
+          </span>
         </div>
       )}
 
