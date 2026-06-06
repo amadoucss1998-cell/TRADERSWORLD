@@ -435,8 +435,11 @@ export default function ApplicationEditorPage() {
             {/* Submit section */}
             <div className="bg-green-600/10 border border-green-600/20 rounded-xl p-6">
               <h3 className="font-semibold text-green-400 mb-2">Ready to Submit?</h3>
-              <p className="text-sm text-[#a1a1aa] mb-4">
+              <p className="text-sm text-[#a1a1aa] mb-2">
                 Once all documents are prepared, submit your complete application package through the official scholarship portal.
+              </p>
+              <p className="text-xs text-yellow-400/80 mb-4">
+                ⚠️ After you submit your application, remember to update your status — click the status badge in the top right and mark it as <strong>Submitted</strong>.
               </p>
               {scholarshipUrl ? (
                 <Button className="gap-2" onClick={() => window.open(scholarshipUrl, '_blank')}>
