@@ -48,12 +48,12 @@ export default function DocumentsPage() {
     setShowCvModal(true)
     setCvText('')
     try {
-      const profileRes = await fetch('/api/profile')
-      const profileData = await profileRes.json()
+      let profile = {}
+      try { profile = JSON.parse(localStorage.getItem('sp_profile') || '{}') } catch {}
       const res = await fetch('/api/cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile: profileData.profile || {}, target_field: 'scholarship' }),
+        body: JSON.stringify({ profile, target_field: 'scholarship' }),
       })
       if (!res.ok || !res.body) throw new Error('Failed to generate CV')
       const reader = res.body.getReader()
