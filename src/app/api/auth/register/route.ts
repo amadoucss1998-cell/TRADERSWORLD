@@ -3,8 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null)
-  if (!body) return Response.json({ error: 'Invalid request body.' }, { status: 400 })
+  let body: Record<string, string> | null = null
+  try { body = await req.json() } catch { /* invalid json */ }
+  if (!body) return Response.json({ error: 'Invalid request.' }, { status: 400 })
 
   const { email, password, full_name } = body
 
@@ -33,15 +34,16 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: error.message }, { status: 400 })
     }
 
-    if (!data.user) {
+    if (!data?.user) {
       return Response.json({ error: 'Registration failed. Please try again.' }, { status: 500 })
     }
 
-    // Sign in immediately to set the session cookie
-    const supabase = await createClient()
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError) {
-      return Response.json({ error: 'Account created! Please sign in.' }, { status: 200 })
+    // Sign in to set session cookie
+    try {
+      const supabase = await createClient()
+      await supabase.auth.signInWithPassword({ email, password })
+    } catch {
+      // Session cookie failed but account was created — user can log in manually
     }
 
     return Response.json({ user: { id: data.user.id, email, full_name } })

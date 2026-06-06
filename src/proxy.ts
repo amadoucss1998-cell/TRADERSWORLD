@@ -13,36 +13,47 @@ export default async function proxy(req: NextRequest) {
 
   let response = NextResponse.next({ request: { headers: req.headers } })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll()
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return req.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+            response = NextResponse.next({ request: { headers: req.headers } })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
-          response = NextResponse.next({ request: { headers: req.headers } })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
+      }
+    )
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (isProtected && !user) {
+      const url = req.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('from', pathname)
+      return NextResponse.redirect(url)
     }
-  )
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (isProtected && !user) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('from', pathname)
-    return NextResponse.redirect(url)
-  }
-
-  if (isAuthPage && user) {
-    return NextResponse.redirect(new URL('/search', req.url))
+    if (isAuthPage && user) {
+      return NextResponse.redirect(new URL('/search', req.url))
+    }
+  } catch {
+    // If Supabase is unreachable, let protected routes redirect to login
+    // and let auth pages render normally
+    if (isProtected) {
+      const url = req.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('from', pathname)
+      return NextResponse.redirect(url)
+    }
   }
 
   return response
