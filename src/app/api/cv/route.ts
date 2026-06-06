@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { anthropic, CLAUDE_MODEL } from '@/lib/claude'
+import { getOpenAI, OPENAI_MODEL } from '@/lib/openai'
 import { buildCVPrompt } from '@/lib/prompts/cv-generator'
 import { NextRequest } from 'next/server'
 
@@ -9,13 +9,14 @@ export async function POST(req: NextRequest) {
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { profile, target_field } = await req.json()
-
   const prompt = buildCVPrompt(profile, target_field || 'scholarship')
 
   try {
-    const stream = anthropic.messages.stream({
-      model: CLAUDE_MODEL,
+    const openai = getOpenAI()
+    const stream = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
       max_tokens: 2000,
+      stream: true,
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -24,9 +25,8 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         try {
           for await (const chunk of stream) {
-            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-              controller.enqueue(encoder.encode(chunk.delta.text))
-            }
+            const text = chunk.choices[0]?.delta?.content ?? ''
+            if (text) controller.enqueue(encoder.encode(text))
           }
           controller.close()
         } catch (err) {

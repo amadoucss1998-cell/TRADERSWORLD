@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { anthropic, CLAUDE_MODEL } from '@/lib/claude'
+import { getOpenAI, OPENAI_MODEL } from '@/lib/openai'
 
 const PROMPTS = {
   cover_letter: (profile: Record<string, string>, scholarship: Record<string, string>) => `
@@ -64,9 +64,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     : PROMPTS.personal_statement(profile, scholarship)
 
   try {
-    const stream = anthropic.messages.stream({
-      model: CLAUDE_MODEL,
+    const openai = getOpenAI()
+    const stream = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
       max_tokens: 800,
+      stream: true,
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -75,9 +77,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const enc = new TextEncoder()
         try {
           for await (const chunk of stream) {
-            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-              controller.enqueue(enc.encode(chunk.delta.text))
-            }
+            const text = chunk.choices[0]?.delta?.content ?? ''
+            if (text) controller.enqueue(enc.encode(text))
           }
           controller.close()
         } catch (err) {
@@ -89,12 +90,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
 
     return new Response(readable, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
-  } catch {
-    // Fallback when Claude not configured
-    const fallback = type === 'cover_letter'
-      ? `Dear Scholarship Committee,\n\nI am writing to apply for the ${scholarship.title} offered by ${scholarship.provider}. As a ${profile.degree_level} student in ${profile.field_of_study} at ${profile.current_institution} with a GPA of ${profile.gpa}, I am confident that I meet and exceed the eligibility criteria for this award.\n\nMy academic journey has been shaped by a deep commitment to excellence and a desire to contribute meaningfully to Liberia's development. Through my studies and extracurricular activities, I have developed both the technical skills and the leadership qualities that your scholarship seeks to nurture.\n\nI respectfully request your consideration of my application. The ${scholarship.title} would be transformative — not just for my career, but for the communities I intend to serve upon my return to Liberia.\n\nThank you for your time and consideration.\n\nSincerely,\n${profile.full_name}`
-      : `Growing up in Liberia, I learned early that education is the most powerful force for change. This conviction has driven every academic and personal decision I have made.\n\nAs a ${profile.degree_level} student in ${profile.field_of_study} maintaining a ${profile.gpa} GPA at ${profile.current_institution}, I have proven my ability to excel academically while remaining grounded in the realities of my community. ${profile.achievements ? `My achievements include: ${profile.achievements}.` : ''}\n\nThe ${scholarship.title} represents an opportunity to access world-class education that will equip me to address the challenges Liberia faces. My goal is not simply to study abroad — it is to return with the expertise and networks necessary to build lasting institutions.\n\nI am committed to making the most of this opportunity. With your support, I will.\n\n— ${profile.full_name}`
-
-    return new Response(fallback, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Generation failed'
+    return Response.json({ error: msg }, { status: 500 })
   }
 }
