@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useRef, use } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft, Save, Clock, ChevronDown, Loader2, Copy, Download,
   CheckCircle, ExternalLink, FileText, PenLine, User, ClipboardList
 } from 'lucide-react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EssayEditor } from '@/components/editor/EssayEditor'
@@ -35,8 +36,9 @@ const CHECKLIST_ITEMS = [
   { doc: 'Financial Need Statement', desc: 'Bank statement or financial need letter if required' },
 ]
 
-export default function ApplicationEditorPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function ApplicationEditorPage() {
+  const params = useParams()
+  const id = params.id as string
   const [app, setApp] = useState<Application | null>(null)
   const [profile, setProfile] = useState<Partial<Profile>>({})
   const [essay, setEssay] = useState('')
