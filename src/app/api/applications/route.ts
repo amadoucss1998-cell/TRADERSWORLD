@@ -1,7 +1,6 @@
 import { getSession } from '@/lib/auth'
 import { NextRequest } from 'next/server'
-
-const memApplications = new Map<string, unknown[]>()
+import { memApplications } from '@/lib/mem-store'
 
 function isSupabaseConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''

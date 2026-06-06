@@ -1,8 +1,6 @@
 import { getSession } from '@/lib/auth'
 import { NextRequest } from 'next/server'
-
-// Shared in-memory store — in production use Supabase
-const memApplications = new Map<string, unknown[]>()
+import { memApplications } from '@/lib/mem-store'
 
 function isSupabaseConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
