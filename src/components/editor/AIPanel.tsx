@@ -30,17 +30,24 @@ export function AIPanel({
   const [collapsed, setCollapsed] = useState(false)
   const [streaming, setStreaming] = useState(false)
   const [output, setOutput] = useState('')
+  const [error, setError] = useState('')
   const [customInstruction, setCustomInstruction] = useState('')
 
   async function runGenerate() {
     setStreaming(true)
     setOutput('')
+    setError('')
     try {
       const res = await fetch('/api/applications/generate-essay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile, scholarshipName, provider, scholarshipDescription, essayPrompt, wordLimit }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || `Error ${res.status}: generation failed`)
+        return
+      }
       if (!res.body) return
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -51,21 +58,29 @@ export function AIPanel({
         text += decoder.decode(value, { stream: true })
         setOutput(text)
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error. Please try again.')
     } finally {
       setStreaming(false)
     }
   }
 
   async function runImprove(instruction: string) {
-    if (!currentEssay) { alert('Write or generate an essay first.'); return }
+    if (!currentEssay) { setError('Write or generate an essay first.'); return }
     setStreaming(true)
     setOutput('')
+    setError('')
     try {
       const res = await fetch('/api/applications/improve-essay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentEssay, instruction, wordLimit }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || `Error ${res.status}: improvement failed`)
+        return
+      }
       if (!res.body) return
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -76,6 +91,8 @@ export function AIPanel({
         text += decoder.decode(value, { stream: true })
         setOutput(text)
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error. Please try again.')
     } finally {
       setStreaming(false)
     }
@@ -102,6 +119,12 @@ export function AIPanel({
 
       {!collapsed && (
         <div className="p-4 pt-0 space-y-4">
+          {error && (
+            <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-md p-2">
+              {error}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-2">
             {QUICK_ACTIONS.map(action => (
               <Button
