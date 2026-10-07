@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#002868" />
+    <meta name="description" content="Monrovia City: an open-world 3D driving and crime-caper game set in Monrovia, Liberia. Runs in the browser." />
+    <title>Monrovia City</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23002868'/%3E%3Cpath d='M50 14l10.6 32.6H95L67.2 66.8 77.8 99.4 50 79.2 22.2 99.4 32.8 66.8 5 46.6h34.4z' transform='scale(.8) translate(12 4)' fill='%23fff'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="hud" hidden>
+      <div id="topright">
+        <div id="clock">09:00</div>
+        <div id="money">L$0</div>
+        <div id="stars"></div>
+        <div id="healthbar"><div id="health-fill"></div></div>
+      </div>
+      <div id="toasts"></div>
+      <div id="helpbox" hidden></div>
+      <div id="timer" hidden>0:00</div>
+      <div id="bust" hidden><span>BUSTED</span><div><div id="bust-fill"></div></div></div>
+      <div id="bottomleft">
+        <canvas id="minimap" width="200" height="200"></canvas>
+      </div>
+      <div id="location"><div id="street"></div><div id="district"></div></div>
+      <div id="carinfo" hidden>
+        <div id="car-name"></div>
+        <div><span id="speed">0</span><small>km/h</small></div>
+        <div id="car-health"><div id="car-health-fill"></div></div>
+      </div>
+      <div id="objective" hidden></div>
+      <div id="center-msg" hidden><div id="center-title"></div><div id="center-sub"></div></div>
+      <div id="flash"></div>
+    </div>
+
+    <div id="bigmap" hidden>
+      <canvas id="bigmap-canvas" width="1530" height="975"></canvas>
+      <div class="legend">
+        <span><i style="background:#ffd166"></i>Landmark / objective</span>
+        <span><i class="sq" style="background:#ff006e"></i>Spray shop (clears wanted level)</span>
+        <span><i style="background:#3a86ff"></i>Police</span>
+        <span>Press <kbd>M</kbd> to close</span>
+      </div>
+    </div>
+
+    <div id="touch" hidden>
+      <div id="stick"><div id="knob"></div></div>
+      <div id="buttons">
+        <button data-key="KeyF">CAR</button>
+        <button data-key="Space">JUMP<br />BRAKE</button>
+        <button data-key="KeyJ">PUNCH</button>
+        <button data-key="ShiftLeft">RUN</button>
+        <button data-key="KeyH">HORN</button>
+        <button data-key="KeyT">TAXI</button>
+        <button data-key="KeyM">MAP</button>
+      </div>
+    </div>
+
+    <div id="title">
+      <div class="title-card">
+        <div class="flagbar"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <h1><span class="star">★</span> MONROVIA CITY</h1>
+        <p class="tag">Broad Street to Red Light. Hustle hard, drive fast, don't get busted.</p>
+        <button id="play" disabled>Loading Monrovia…</button>
+        <div class="controls">
+          <div><kbd>W A S D</kbd> move / drive</div>
+          <div><kbd>Mouse</kbd> look (click to capture)</div>
+          <div><kbd>Shift</kbd> sprint</div>
+          <div><kbd>Space</kbd> jump / handbrake</div>
+          <div><kbd>F</kbd> / <kbd>E</kbd> enter, exit or steal a car</div>
+          <div><kbd>J</kbd> / <kbd>Click</kbd> punch</div>
+          <div><kbd>H</kbd> horn &nbsp; <kbd>Q</kbd> siren (police car)</div>
+          <div><kbd>T</kbd> taxi job (in a yellow taxi)</div>
+          <div><kbd>M</kbd> map &nbsp; <kbd>C</kbd> camera &nbsp; <kbd>R</kbd> radio</div>
+          <div><kbd>P</kbd> pause</div>
+        </div>
+        <p class="fine">Find all 24 hidden Lone Stars. Complete jobs at the coloured markers. Pink garages clear your wanted level.</p>
+      </div>
+    </div>
+
+    <div id="pause" hidden>
+      <div class="title-card small">
+        <h2>Paused</h2>
+        <div id="stats"></div>
+        <button id="resume">Resume</button>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

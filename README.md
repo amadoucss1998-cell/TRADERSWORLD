@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Monrovia City
 
-## Getting Started
+An open-world 3D game set in Monrovia, Liberia, playable in the browser. Steal cars, drive yellow taxis
+and kekes down Broad Street, outrun the LNP, and hustle your way from Mamba Point to Red Light Market.
 
-First, run the development server:
+Built with [Three.js](https://threejs.org) and [Vite](https://vite.dev). No assets to download: the city,
+the people, the cars and even the car radio are generated in code.
+
+## Play
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run build` makes a static site in `dist/` (deployed to GitHub Pages by `.github/workflows/deploy.yml`
+on every push to `main`). `npm run build:single` inlines everything into one self-contained
+`dist-single/index.html` you can open or share as a single file.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Controls
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Keys | Action |
+| --- | --- |
+| `W A S D` / arrows | move, drive |
+| Mouse (click to capture) | look around |
+| `Shift` | sprint |
+| `Space` | jump / handbrake |
+| `F` or `E` | get in, get out, or jack a car |
+| `J` or left click | punch |
+| `H` | horn |
+| `Q` | siren (in a police car) |
+| `T` | start or stop a taxi job (in a yellow taxi) |
+| `M` | city map |
+| `C` | near / far camera |
+| `R` | radio on / off |
+| `P` | pause |
 
-## Learn More
+On phones and tablets an on-screen joystick and buttons appear; drag the screen to look.
 
-To learn more about Next.js, take a look at the following resources:
+## What's in the city
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Districts:** Mamba Point, West Point, Waterside, Snapper Hill, Downtown, Capitol Hill, Sinkor,
+  Paynesville, Providence Island and Bushrod Island / Freeport, joined by the Gabriel Tucker Bridge.
+- **Landmarks:** Ducor Hotel, Cape Mesurado Lighthouse, Waterside Market, Masonic Temple, LNP Headquarters,
+  City Hall, the Capitol, the Executive Mansion, JFK Medical Center, SKD Sports Complex, Red Light Market
+  and the Freeport docks.
+- **Streets:** Broad, Carey, Ashmun, Water, Randall, Mechlin, Buchanan, Center, Gurley, Lynch, Camp Johnson
+  Road, Tubman Boulevard, UN Drive and more.
+- **Traffic:** yellow taxis, kekes, money buses, Land Cruisers, pickups and the odd sports car, driving on
+  the right and stopping for people (mostly).
+- **Wanted level:** punching people, running them over or jacking cars near the police raises your stars.
+  Police cruisers chase you along the road network; at three stars a helicopter joins in. Break line of
+  sight to cool down, or pay for a respray at a pink garage.
+- **Jobs:** Waterside Hustle (delivery), Ducor Dash (race), Freeport Run (steal and deliver), Lose the Heat
+  (escape), plus taxi fares in any yellow taxi.
+- **Collectibles:** 24 hidden Lone Stars.
+- **Day and night:** a full day lasts 10 minutes; windows, street lamps and the lighthouse light up at night.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Progress (money, finished jobs, Lone Stars) is saved in your browser.
 
-## Deploy on Vercel
+## Code map
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| File | What it does |
+| --- | --- |
+| `src/config.js` | Map layout: land, streets, districts, landmarks |
+| `src/world.js` | Builds the city geometry, merged into a handful of draw calls |
+| `src/roads.js` | Road graph used by traffic, police pathfinding and street names |
+| `src/collision.js` | Spatial hash of static boxes, shoreline checks |
+| `src/vehicles.js` | Car models and arcade driving physics |
+| `src/traffic.js`, `src/peds.js`, `src/police.js` | AI drivers, pedestrians, wanted level |
+| `src/missions.js`, `src/pickups.js` | Jobs, taxi fares, Lone Stars, cash |
+| `src/hud.js`, `src/input.js`, `src/audio.js`, `src/sky.js` | HUD and minimap, controls, synthesised sound, day/night |
+| `src/main.js` | Game loop that ties it all together |
