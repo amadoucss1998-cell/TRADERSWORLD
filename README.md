@@ -72,6 +72,14 @@ Progress (money, finished jobs, Lone Stars) is saved in your browser.
 | `src/hud.js`, `src/input.js`, `src/audio.js`, `src/sky.js` | HUD and minimap, controls, synthesised sound, day/night |
 | `src/main.js` | Game loop that ties it all together |
 
+## Real photos of Monrovia
+
+`npm run photos` downloads openly licensed photos of Monrovia's landmarks and streets from Wikimedia Commons
+into `src/photos/` (CC0, public domain, CC BY and CC BY-SA only), with each photographer's credit and licence
+in `src/photos/photos.json`. The game shows them on billboards beside the matching landmarks, as a slideshow
+behind the title screen, and lists the credits in the pause menu. Edit the list at the top of
+`scripts/fetch-photos.mjs` to change which places it looks for.
+
 ## Credits
 
 Car, character and palm tree models are by [Kenney](https://kenney.nl), released under CC0, taken from the

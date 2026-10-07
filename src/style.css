@@ -747,3 +747,59 @@ button {
     font-size: 14px;
   }
 }
+
+/* real Monrovia photos behind the title card */
+#title-photo {
+  position: fixed;
+  inset: 0;
+  background: center / cover no-repeat;
+  transition: background-image 1s ease;
+  z-index: -1;
+}
+
+#title {
+  isolation: isolate;
+}
+
+#title-photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 10, 30, 0.45), rgba(0, 0, 0, 0.75));
+}
+
+#title-photo .credit {
+  position: absolute;
+  right: 12px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  max-width: min(520px, 80vw);
+  font-size: 11px;
+  color: #e6e9f0;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: right;
+}
+
+#credits {
+  margin-top: 14px;
+  text-align: left;
+  font-size: 12px;
+  color: #c9d1e0;
+}
+
+#credits summary {
+  cursor: pointer;
+  text-align: center;
+}
+
+#credits ul {
+  max-height: 180px;
+  overflow-y: auto;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+#credits a {
+  color: #c9d1e0;
+}

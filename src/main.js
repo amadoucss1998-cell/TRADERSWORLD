@@ -19,6 +19,7 @@ import { Missions } from './missions.js';
 import { Pickups, LONE_STAR_COUNT } from './pickups.js';
 import { Vehicle, collideVehicles, lightsMat, frontLightMat, backLightMat } from './vehicles.js';
 import { loadAssets } from './assets.js';
+import { buildPhotoBillboards, PHOTOS } from './photos.js';
 import { clamp, dampAngle, damp } from './utils.js';
 
 const SAVE_KEY = 'monrovia-city-save-v1';
@@ -58,6 +59,8 @@ class Game {
     this.collision = new Collision();
     this.roads = new RoadGraph();
     this.world = buildWorld(this.scene, this.collision, this.roads);
+    const markers = [[-100, -130], [-300, -84], [300, 133], [-139, -45], [SPAWN.x, SPAWN.z]];
+    this.photos = buildPhotoBillboards(this.scene, this.roads, this.collision, markers);
     this.sky = new Sky(this.scene);
     if (mobile) this.sky.sun.shadow.mapSize.set(1024, 1024);
     this.audio = new Audio();
@@ -112,6 +115,7 @@ class Game {
   }
 
   setupMenus() {
+    this.setupPhotos();
     const play = document.getElementById('play');
     play.disabled = false;
     play.textContent = this.save.money !== 500 || this.save.done.length ? 'Continue' : 'Play';
@@ -133,6 +137,38 @@ class Game {
         : 'Walk with <kbd>W A S D</kbd>. Steal the yellow taxi beside you with <kbd>F</kbd>.<br/>Coloured markers start jobs. <kbd>M</kbd> opens the map.', 9);
     });
     document.getElementById('resume').addEventListener('click', () => this.setPaused(false));
+  }
+
+  // Title-screen slideshow and the credits list for the real Monrovia photos.
+  setupPhotos() {
+    if (!PHOTOS.length) return;
+    const credit = (p) => `${p.title} · ${p.artist} · ${p.license}`;
+    const list = document.getElementById('credit-list');
+    for (const p of PHOTOS) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = p.source;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = credit(p);
+      li.appendChild(a);
+      list.appendChild(li);
+    }
+    document.getElementById('credits').hidden = false;
+    const box = document.getElementById('title-photo');
+    const cap = box.querySelector('.credit');
+    box.hidden = false;
+    let i = 0;
+    const show = () => {
+      const p = PHOTOS[i++ % PHOTOS.length];
+      box.style.backgroundImage = `url("${p.url}")`;
+      cap.textContent = `Photo: ${credit(p)}`;
+    };
+    show();
+    this.slideshow = setInterval(() => {
+      if (this.started) clearInterval(this.slideshow);
+      else show();
+    }, 6000);
   }
 
   setPaused(p) {
@@ -669,6 +705,7 @@ class Game {
     this.particles.update(dt);
     this.sky.update(dt, this.playerPos, 24 / DAY_LENGTH_SECONDS);
     this.world.update(dt, this.time, this.sky.night);
+    this.photos.update(this.sky.night);
     lightsMat.color.setScalar(0.75 + this.sky.night * 1.2);
     frontLightMat.color.setRGB(1, 0.96, 0.84).multiplyScalar(0.8 + this.sky.night * 1.6);
     backLightMat.color.setRGB(0.82, 0.06, 0.06).multiplyScalar(0.8 + this.sky.night * 1.8);
