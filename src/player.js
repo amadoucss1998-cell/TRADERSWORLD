@@ -5,8 +5,7 @@ import { dampAngle } from './utils.js';
 
 export class Player {
   constructor(scene) {
-    // red shirt, blue cap: Liberian flag colours
-    this.human = createHuman({ skin: 0x4a2c1d, shirt: 0xbf0a30, pants: 0x1d3557, hair: 0x111111, cap: 0x002868 });
+    this.human = createHuman({ model: 'survivor-male', skin: 0x7a4a2c });
     scene.add(this.human.group);
     this.pos = new THREE.Vector3();
     this.vy = 0;

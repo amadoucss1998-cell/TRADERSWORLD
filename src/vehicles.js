@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { onLand } from './collision.js';
 import { clamp, pick, MeshBuilder, makeMatrix } from './utils.js';
 import { makeSignTexture } from './textures.js';
+import { assets } from './assets.js';
 
 export const VEHICLE_TYPES = {
   taxi: { name: 'Yellow Taxi', len: 4.4, wid: 1.85, h: 1.45, maxSpeed: 38, accel: 14, mass: 1, colors: [0xf6c90e], body: 'sedan' },
@@ -11,10 +12,97 @@ export const VEHICLE_TYPES = {
   bus: { name: 'Money Bus', len: 5.8, wid: 2.1, h: 2.4, maxSpeed: 29, accel: 8, mass: 2, colors: [0xf6c90e, 0xffffff, 0x8ecae6], body: 'bus' },
   keke: { name: 'Keke', len: 2.9, wid: 1.4, h: 1.85, maxSpeed: 21, accel: 10, mass: 0.6, colors: [0xf6c90e], body: 'keke' },
   police: { name: 'LNP Cruiser', len: 4.7, wid: 1.9, h: 1.55, maxSpeed: 46, accel: 18, mass: 1.2, colors: [0xffffff], body: 'police' },
+  ambulance: { name: 'Ambulance', len: 5, wid: 2, h: 2.3, maxSpeed: 40, accel: 13, mass: 1.6, colors: [0xffffff], body: 'van' },
+  delivery: { name: 'Box Truck', len: 5.4, wid: 2.1, h: 2.6, maxSpeed: 30, accel: 9, mass: 2.2, colors: [0x2a9d8f], body: 'van' },
   sports: { name: 'Fine Boy GT', len: 4.4, wid: 1.95, h: 1.2, maxSpeed: 58, accel: 24, mass: 1, colors: [0xff5400, 0xd00000, 0x00b4d8, 0x111111], body: 'sports' },
 };
 
 const WHEEL_R = 0.36;
+
+// Which Kenney model each vehicle type uses, its scale, and whether its paint takes the random colour.
+const MODELS = {
+  taxi: { model: 'taxi', s: 1.25 },
+  sedan: { model: 'sedan', s: 1.75, paint: true },
+  suv: { model: 'suv-luxury', s: 1.75, paint: true },
+  pickup: { model: 'truck', s: 1.75, paint: true },
+  bus: { model: 'van', s: 1.7, paint: true },
+  police: { model: 'police-car', s: 1.55 },
+  sports: { model: 'sports-sedan', s: 1.75, paint: true },
+  ambulance: { model: 'ambulance', s: 1.55 },
+  delivery: { model: 'delivery-truck', s: 1.7, paint: true },
+};
+export const frontLightMat = new THREE.MeshBasicMaterial({ color: 0xfff6d5 });
+export const backLightMat = new THREE.MeshBasicMaterial({ color: 0xd01010 });
+const paintCache = new Map();
+const paintMat = (color) => {
+  if (!paintCache.has(color)) paintCache.set(color, new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.35 }));
+  return paintCache.get(color);
+};
+
+function buildModelMesh(type, color) {
+  const cfg = MODELS[type];
+  const spec = VEHICLE_TYPES[type];
+  const src = assets.cars[cfg.model];
+  const car = src.clone(true);
+  const s = cfg.s;
+  car.scale.set(s * 0.8, s * 0.8, s);
+  const g = new THREE.Group();
+  const body = new THREE.Group();
+  g.add(body);
+  body.add(car);
+  g.updateMatrixWorld(true);
+  if (!spec.fitted) {
+    const box = new THREE.Box3().setFromObject(car);
+    const size = box.getSize(new THREE.Vector3());
+    spec.len = size.z;
+    spec.wid = size.x * 0.92;
+    spec.h = size.y;
+    spec.fitted = true;
+  }
+  const sirens = [];
+  let firstPaint = null;
+  car.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true;
+    const n = o.material.name || '';
+    if (o.material.metalness > 0.5) o.material.metalness = 0.2; // glTF defaults trim to fully metallic
+    if (n.startsWith('lightFront')) o.material = frontLightMat;
+    else if (n.startsWith('lightBack')) o.material = backLightMat;
+    else if (n.startsWith('lightBlue')) {
+      const red = sirens.length % 2 === 0;
+      o.material = new THREE.MeshStandardMaterial({ color: red ? 0xff1010 : 0x1040ff, emissive: red ? 0xff0000 : 0x0044ff, emissiveIntensity: 0.2 });
+      sirens.push(o);
+    } else if (cfg.paint && n.startsWith('paint')) {
+      firstPaint = firstPaint || n;
+      if (n === firstPaint) o.material = paintMat(color);
+    }
+  });
+  // wheels: a steering pivot holding a spinning hub, so models with odd node transforms still turn right
+  const wheels = [];
+  const front = [];
+  let wheelR = 0.3;
+  const wheelNodes = [];
+  car.traverse((o) => {
+    if (/^wheel_/.test(o.name) && o.name !== 'wheel_back' && !/^wheel_/.test(o.parent.name)) wheelNodes.push(o);
+  });
+  for (const w of wheelNodes) {
+    const box = new THREE.Box3().setFromObject(w);
+    const c = box.getCenter(new THREE.Vector3());
+    wheelR = (box.max.y - box.min.y) / 2;
+    const steer = new THREE.Group();
+    steer.position.copy(c);
+    const spin = new THREE.Group();
+    steer.add(spin);
+    body.add(steer);
+    g.updateMatrixWorld(true);
+    spin.attach(w);
+    wheels.push(spin);
+    if (c.z > 0) front.push(steer);
+  }
+  const driver = new THREE.Group();
+  body.add(driver);
+  return { group: g, body, wheels, front, driver, lights: sirens.length ? sirens : null, wheelR };
+}
 const geoBox = new THREE.BoxGeometry(1, 1, 1);
 const geoWheel = new THREE.CylinderGeometry(WHEEL_R, WHEEL_R, 0.26, 12).rotateZ(Math.PI / 2);
 const matCache = new Map();
@@ -83,6 +171,7 @@ function mergeParts(body) {
 }
 
 function buildMesh(type, color) {
+  if (MODELS[type] && assets.cars[MODELS[type].model]) return buildModelMesh(type, color);
   const s = VEHICLE_TYPES[type];
   const g = new THREE.Group();
   const body = new THREE.Group();
@@ -167,7 +256,7 @@ function buildMesh(type, color) {
       part(body, geoBox, mat(0x0a2463), 0, base + lowerH * 0.5 + 0.1, 0, W + 0.02, 0.22, L * 0.98);
       const r = part(body, geoBox, sirenRed.clone(), -0.3, roofTop + 0.1, cabZ, 0.5, 0.16, 0.3);
       const b = part(body, geoBox, sirenBlue.clone(), 0.3, roofTop + 0.1, cabZ, 0.5, 0.16, 0.3);
-      lights = { r, b };
+      lights = [r, b];
       if (!policeTextMat) policeTextMat = new THREE.MeshStandardMaterial({ map: makeSignTexture('POLICE', { bg: '#0a2463', fg: '#ffffff', w: 256, h: 64, font: 'bold 44px sans-serif' }) });
       const t1 = part(body, new THREE.PlaneGeometry(1, 1), policeTextMat, W / 2 + 0.02, base + lowerH * 0.5 + 0.1, 0, 1.8, 0.45, 1);
       t1.rotation.y = Math.PI / 2;
@@ -186,7 +275,7 @@ function buildMesh(type, color) {
   const driver = new THREE.Mesh(driverGeo, driverMat);
   driver.position.set(s.body === 'keke' ? 0 : -0.4, base + 0.55, s.body === 'keke' ? 0.55 : s.body === 'bus' ? L * 0.3 : 0.1);
   body.add(driver);
-  return { group: g, body, wheels, front, driver, lights: g.userData.lights };
+  return { group: g, body, wheels, front, driver, lights: g.userData.lights, wheelR: WHEEL_R };
 }
 
 export class Vehicle {
@@ -321,10 +410,9 @@ export class Vehicle {
       this.sirenT += dt;
       const on = this.sirenOn && !this.destroyed;
       const phase = Math.floor(this.sirenT * 6) % 2;
-      this.lights.r.material.emissiveIntensity = on ? 3 : 0.2;
-      this.lights.b.material.emissiveIntensity = on ? 3 : 0.2;
-      this.lights.r.visible = !on || phase === 0;
-      this.lights.b.visible = !on || phase === 1;
+      this.lights.forEach((m, i) => {
+        m.material.emissiveIntensity = on && phase === i % 2 ? 4 : 0.2;
+      });
     }
     this.syncMesh(dt);
   }
@@ -363,7 +451,7 @@ export class Vehicle {
       this.pitch += (clamp(-accel * 0.006, -0.06, 0.06) - this.pitch) * Math.min(1, dt * 5);
       this.body.rotation.z = this.roll;
       this.body.rotation.x = this.pitch;
-      for (const w of this.wheels) w.rotation.x += (this.speed / WHEEL_R) * dt;
+      for (const w of this.wheels) w.rotation.x += (this.speed / this.wheelR) * dt;
       for (const f of this.front) f.rotation.y = -this.steerAngle;
     }
   }

@@ -3,8 +3,8 @@
 An open-world 3D game set in Monrovia, Liberia, playable in the browser. Steal cars, drive yellow taxis
 and kekes down Broad Street, outrun the LNP, and hustle your way from Mamba Point to Red Light Market.
 
-Built with [Three.js](https://threejs.org) and [Vite](https://vite.dev). No assets to download: the city,
-the people, the cars and even the car radio are generated in code.
+Built with [Three.js](https://threejs.org) and [Vite](https://vite.dev). The city layout, buildings and
+landmarks are generated in code, and so is all the sound, including the car radio.
 
 ## Play
 
@@ -71,3 +71,11 @@ Progress (money, finished jobs, Lone Stars) is saved in your browser.
 | `src/missions.js`, `src/pickups.js` | Jobs, taxi fares, Lone Stars, cash |
 | `src/hud.js`, `src/input.js`, `src/audio.js`, `src/sky.js` | HUD and minimap, controls, synthesised sound, day/night |
 | `src/main.js` | Game loop that ties it all together |
+
+## Credits
+
+Car, character and palm tree models are by [Kenney](https://kenney.nl), released under CC0, taken from the
+[pmndrs market assets](https://github.com/pmndrs/market-assets) collection. They were decompressed and
+quantized with [glTF-Transform](https://gltf-transform.dev) and live in `src/assets/models/`. The characters are
+rigged models posed in code (`src/character.js`) and their textures are recoloured at load time
+(`src/assets.js`) for Liberian skin tones and varied clothing.

@@ -8,6 +8,7 @@ import {
   makeSignTexture, makeFlagTexture,
 } from './textures.js';
 import { onLand } from './collision.js';
+import { assets } from './assets.js';
 
 const WALL_COLORS = [
   0xf2e8cf, 0xf6d6a8, 0xd8e2dc, 0xa8dadc, 0xffcdb2, 0xe9c46a, 0xb5e48c, 0xf4acb7, 0xffffff, 0xd4a373,
@@ -737,26 +738,28 @@ export function buildWorld(scene, collision, roads) {
   // palms: instanced trunks + crowns
   {
     const trunkGeo = new THREE.CylinderGeometry(0.18, 0.3, 1, 6).translate(0, 0.5, 0);
-    const frondGeo = new THREE.BoxGeometry(0.7, 0.06, 3.6).translate(0, 0, 1.7);
-    const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 1 }), palms.length);
-    const fronds = new THREE.InstancedMesh(frondGeo, new THREE.MeshStandardMaterial({ color: 0x3a7d2c, roughness: 0.9 }), palms.length * 7);
-    let fi = 0;
-    palms.forEach((p, i) => {
-      trunks.setMatrixAt(i, makeMatrix(p.x, 0, p.z, p.lean, 0, p.lean * 0.5, 1, p.h, 1));
-      const tx = p.x + Math.sin(p.lean * 0.5) * -p.h * 0.5;
-      const tz = p.z + Math.sin(p.lean) * p.h;
-      for (let k = 0; k < 7; k++) {
-        const ry = p.ry + (k / 7) * Math.PI * 2;
-        fronds.setMatrixAt(fi++, makeMatrix(tx, p.h, tz, 0.35 + (k % 2) * 0.2, ry, 0));
-      }
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 1 });
+    // Kenney's detailed palm model, instanced; each part is re-centred on the trunk base
+    const src = assets.palm;
+    src.updateMatrixWorld(true);
+    const pbox = new THREE.Box3().setFromObject(src);
+    const pc = pbox.getCenter(new THREE.Vector3());
+    const ph = pbox.max.y - pbox.min.y;
+    const recentre = new THREE.Matrix4().makeTranslation(-pc.x, -pbox.min.y, -pc.z);
+    src.traverse((o) => {
+      if (!o.isMesh) return;
+      const geo = o.geometry.clone().applyMatrix4(o.matrixWorld).applyMatrix4(recentre);
+      const mesh = new THREE.InstancedMesh(geo, o.material, palms.length);
+      palms.forEach((p, i) => {
+        const k = p.h / ph;
+        mesh.setMatrixAt(i, makeMatrix(p.x, 0, p.z, p.lean * 0.5, p.ry, 0, k * 1.1, k, k * 1.1));
+      });
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
     });
-    for (const m of [trunks, fronds]) {
-      m.castShadow = true;
-      m.receiveShadow = true;
-      scene.add(m);
-    }
     const crownGeo = new THREE.IcosahedronGeometry(1, 0);
-    const trunk2 = new THREE.InstancedMesh(trunkGeo, trunks.material, leafy.length);
+    const trunk2 = new THREE.InstancedMesh(trunkGeo, trunkMat, leafy.length);
     const crowns = new THREE.InstancedMesh(crownGeo, new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.9, flatShading: true }), leafy.length);
     leafy.forEach((t, i) => {
       trunk2.setMatrixAt(i, makeMatrix(t.x, 0, t.z, 0, 0, 0, 1.5 * t.s, 3.2 * t.s, 1.5 * t.s));

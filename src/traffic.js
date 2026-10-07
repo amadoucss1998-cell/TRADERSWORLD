@@ -3,7 +3,7 @@ import { LANE_OFFSET, ROAD_HALF } from './config.js';
 import { clamp, wrapAngle } from './utils.js';
 
 const TYPE_WEIGHTS = [
-  ['taxi', 34], ['keke', 14], ['sedan', 18], ['suv', 12], ['bus', 9], ['pickup', 8], ['sports', 3],
+  ['taxi', 34], ['keke', 12], ['sedan', 18], ['suv', 12], ['bus', 9], ['pickup', 8], ['delivery', 4], ['sports', 3],
 ];
 
 export function randomType() {

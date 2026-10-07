@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { createHuman, SKIN_TONES, SHIRTS, PANTS } from './character.js';
+import { createHuman, SKIN_TONES } from './character.js';
+import { PEOPLE_MODELS } from './assets.js';
 import { ROAD_HALF, SIDEWALK } from './config.js';
 import { onLand } from './collision.js';
 import { pick } from './utils.js';
@@ -8,7 +9,7 @@ const SIDE_OFFSET = ROAD_HALF + SIDEWALK / 2;
 
 // Pedestrians wander the sidewalks, cross streets, flee from danger and can be knocked down.
 export class Peds {
-  constructor(scene, roads, collision, count = 55) {
+  constructor(scene, roads, collision, count = 45) {
     this.scene = scene;
     this.roads = roads;
     this.collision = collision;
@@ -18,11 +19,10 @@ export class Peds {
 
   spawn(near) {
     const h = createHuman({
+      model: pick(Math.random, PEOPLE_MODELS),
       skin: pick(Math.random, SKIN_TONES),
-      shirt: pick(Math.random, SHIRTS),
-      pants: pick(Math.random, PANTS),
-      hair: Math.random() < 0.3 ? 0x2b1d14 : 0x111111,
-      scale: 0.9 + Math.random() * 0.15,
+      shirtHue: Math.floor(Math.random() * 6) / 6,
+      scale: 0.92 + Math.random() * 0.14,
     });
     this.scene.add(h.group);
     const p = { human: h, state: 'walk', timer: 0, speed: 1.2 + Math.random() * 0.6, pos: new THREE.Vector3(), heading: 0 };

@@ -17,7 +17,8 @@ import { Traffic, randomType } from './traffic.js';
 import { Police } from './police.js';
 import { Missions } from './missions.js';
 import { Pickups, LONE_STAR_COUNT } from './pickups.js';
-import { Vehicle, collideVehicles, lightsMat } from './vehicles.js';
+import { Vehicle, collideVehicles, lightsMat, frontLightMat, backLightMat } from './vehicles.js';
+import { loadAssets } from './assets.js';
 import { clamp, dampAngle, damp } from './utils.js';
 
 const SAVE_KEY = 'monrovia-city-save-v1';
@@ -69,7 +70,7 @@ class Game {
 
     this.player = new Player(this.scene);
     this.player.setPosition(SPAWN.x + 8.2, SPAWN.z + 5, SPAWN.heading);
-    this.peds = new Peds(this.scene, this.roads, this.collision, 55);
+    this.peds = new Peds(this.scene, this.roads, this.collision, 45);
     this.traffic = new Traffic(this, 28);
     this.police = new Police(this);
     this.missions = new Missions(this);
@@ -82,6 +83,7 @@ class Game {
     this.spawnParked('police', -88, -44, Math.PI / 2).keep = true;
     this.spawnParked('suv', -290, -96, Math.PI / 2, 0xffffff);
     this.spawnParked('sports', 205, 132, -Math.PI / 2, 0xd00000);
+    this.spawnParked('ambulance', 265, 66, Math.PI / 2).keep = true;
     for (let i = 0; i < 6; i++) this.traffic.spawn(this.player.pos, 30, 200);
     for (let i = 0; i < 12; i++) this.spawnParkedRandom(this.player.pos, 40, 260);
 
@@ -668,6 +670,8 @@ class Game {
     this.sky.update(dt, this.playerPos, 24 / DAY_LENGTH_SECONDS);
     this.world.update(dt, this.time, this.sky.night);
     lightsMat.color.setScalar(0.75 + this.sky.night * 1.2);
+    frontLightMat.color.setRGB(1, 0.96, 0.84).multiplyScalar(0.8 + this.sky.night * 1.6);
+    backLightMat.color.setRGB(0.82, 0.06, 0.06).multiplyScalar(0.8 + this.sky.night * 1.8);
 
     // player headlights at night
     if (v && this.sky.night > 0.35 && !v.destroyed) {
@@ -816,4 +820,14 @@ class Game {
   }
 }
 
-window.game = new Game();
+const play = document.getElementById('play');
+loadAssets((k) => {
+  play.textContent = `Loading Monrovia… ${Math.round(k * 100)}%`;
+})
+  .then(() => {
+    window.game = new Game();
+  })
+  .catch((err) => {
+    console.error(err);
+    play.textContent = 'Could not load the game. Reload to try again.';
+  });
