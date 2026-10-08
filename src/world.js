@@ -192,6 +192,23 @@ export function buildWorld(scene, collision, roads) {
   const swBox = (x0, z0, x1, z1) => {
     swB.addBox(x0, 0, z0, x1, 0.12, z1, 0xffffff, 1 / 4, 1 / 4);
   };
+  // red-and-white painted kerbs, as on Monrovia's main streets (one red + one white block = 3m)
+  const curbB = new MeshBuilder();
+  const curbTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 8;
+    const g = c.getContext('2d');
+    g.fillStyle = '#b3202a';
+    g.fillRect(0, 0, 32, 8);
+    g.fillStyle = '#efefe8';
+    g.fillRect(32, 0, 32, 8);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.magFilter = THREE.NearestFilter;
+    return t;
+  })();
   for (const r of roads.rects) {
     const sides = r.axis === 'x'
       ? [[r.z0 - SIDEWALK, r.z0], [r.z1, r.z1 + SIDEWALK]]
@@ -204,6 +221,11 @@ export function buildWorld(scene, collision, roads) {
         if (run !== null && end - run > 1) {
           if (r.axis === 'x') swBox(run, c0, end, c1);
           else swBox(c0, run, c1, end);
+          const edge = c1 === r.z0 || c1 === r.x0 ? c1 : c0;
+          const k0 = edge === c1 ? edge - 0.3 : edge;
+          const k1 = k0 + 0.3;
+          if (r.axis === 'x') curbB.addBox(run, 0, k0, end, 0.2, k1, 0xffffff, 1 / 3, 1, run / 3, 'x');
+          else curbB.addBox(k0, 0, run, k1, 0.2, end, 0xffffff, 1 / 3, 1, run / 3, 'z');
         }
         run = null;
       };
@@ -218,6 +240,9 @@ export function buildWorld(scene, collision, roads) {
       flush(a1);
     }
   }
+  const curbMesh = new THREE.Mesh(curbB.build(), new THREE.MeshStandardMaterial({ map: curbTex, roughness: 0.8 }));
+  curbMesh.receiveShadow = true;
+  scene.add(curbMesh);
   const swMesh = new THREE.Mesh(swB.build(), new THREE.MeshStandardMaterial({ map: swTex, roughness: 0.95 }));
   swMesh.receiveShadow = true;
   scene.add(swMesh);
@@ -237,9 +262,10 @@ export function buildWorld(scene, collision, roads) {
     const cz = (z0 + z1) / 2;
     const dist = districtOf(cx, cz);
     let h;
-    if (dist === 'Downtown Monrovia') h = rand() < 0.12 ? 34 + rand() * 22 : 7 + rand() * 24;
-    else if (dist === 'Snapper Hill' || dist === 'Waterside') h = 6 + rand() * 16;
-    else if (dist === 'Capitol Hill' || dist === 'Mamba Point') h = 5 + rand() * 15;
+    // Monrovia is mostly 2 to 5 storeys, with the odd office block downtown
+    if (dist === 'Downtown Monrovia') h = rand() < 0.08 ? 28 + rand() * 14 : 7 + rand() * 12;
+    else if (dist === 'Snapper Hill' || dist === 'Waterside') h = 6 + rand() * 9;
+    else if (dist === 'Capitol Hill' || dist === 'Mamba Point') h = 5 + rand() * 11;
     else if (dist === 'Bushrod Island' || dist === 'Freeport of Monrovia') h = 4 + rand() * 7;
     else h = rand() < 0.1 ? 14 + rand() * 12 : 3.6 + rand() * 7;
     if ((dist === 'Sinkor' || dist === 'Paynesville') && rand() < 0.22) {
@@ -252,7 +278,8 @@ export function buildWorld(scene, collision, roads) {
     }
     h = Math.round(h / 3.5) * 3.5;
     if (h < 3.5) h = 3.5;
-    const color = new THREE.Color(pick(rand, WALL_COLORS)).multiplyScalar(0.82 + rand() * 0.18);
+    // faded paint: pull the colour toward a dusty concrete grey
+    const color = new THREE.Color(pick(rand, WALL_COLORS)).lerp(new THREE.Color(0xb9b2a4), 0.25 + rand() * 0.25).multiplyScalar(0.8 + rand() * 0.18);
     windowed.addBox(x0, 0, z0, x1, h, z1, color, 1 / 32, 1 / 28, Math.floor(rand() * 8) / 8);
     collision.add(x0, z0, x1, z1, h);
     if (h <= 10.5 && rand() < 0.8) {
@@ -262,10 +289,50 @@ export function buildWorld(scene, collision, roads) {
       P(prism, pick(rand, ROOF_COLORS), cx, h, cz, (along ? x1 - x0 : z1 - z0) + 0.8, rh, (along ? z1 - z0 : x1 - x0) + 0.8, along ? 0 : Math.PI / 2);
     } else {
       P(box, 0x8e8e88, cx, h + 0.4, cz, x1 - x0, 0.8, z1 - z0); // parapet slab
-      if (rand() < 0.6) P(cyl, 0x2b2d42, x0 + 2.5, h + 2, z0 + 2.5, 2.4, 2.4, 2.4); // water tank
+      // black plastic water tanks, everywhere on Monrovia roofs
+      const tanks = rand() < 0.75 ? 1 + Math.floor(rand() * 3) : 0;
+      for (let k = 0; k < tanks; k++) P(cyl, 0x1c1c1e, x0 + 2 + k * 2.6, h + 1.9, z0 + 2.2, 2.2, 2.2, 2.2);
       if (rand() < 0.35) P(box, 0xd0d0d0, cx + 2, h + 1.6, cz - 1, 3, 1.6, 2); // stair house
+      if (rand() < 0.45) {
+        // satellite dish on a short pole
+        const sx = x1 - 2;
+        const sz = z1 - 2;
+        P(cyl, 0x777777, sx, h + 1.4, sz, 0.08, 1.4, 0.08);
+        P(hemi, 0xe8e8e8, sx, h + 2.1, sz, 1.4, 0.5, 1.4, rand() * 6, 1.1);
+      }
+      if (rand() < 0.3) {
+        // rebar left sticking up for the next storey, which may come one day
+        for (let rx = x0 + 1; rx < x1 - 0.5; rx += 3.5) {
+          for (const rz of [z0 + 1, z1 - 1]) P(box, 0x6b4a32, rx, h + 1.6, rz, 0.06, 2.4, 0.06);
+        }
+      }
       if (rand() < 0.25) {
         P(cyl, 0x777777, cx - 2, h + 4, cz + 2, 0.15, 7, 0.15); // antenna
+      }
+    }
+    // balconies with iron railings on the street side of most multi-storey buildings
+    if (h >= 7 && rand() < 0.55) {
+      const faces = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+      for (const [fx, fz] of faces) {
+        const px = cx + fx * ((x1 - x0) / 2 + 8);
+        const pz = cz + fz * ((z1 - z0) / 2 + 8);
+        if (!roads.onRoad(px, pz, 2)) continue;
+        const len = (fz ? x1 - x0 : z1 - z0) - 2;
+        if (len < 4) continue;
+        const ex = fx ? (fx > 0 ? x1 : x0) : cx;
+        const ez = fz ? (fz > 0 ? z1 : z0) : cz;
+        const railCol = pick(rand, [0x2b2b2b, 0x3a5a40, 0x1f4e79, 0x8c2f39]);
+        for (let y = 3.5; y < h - 0.5; y += 3.5) {
+          if (rand() < 0.25) continue;
+          const bx = ex + fx * 0.6;
+          const bz = ez + fz * 0.6;
+          P(box, 0x9a958a, bx, y, bz, fz ? len : 1.2, 0.15, fz ? 1.2 : len);
+          P(box, railCol, ex + fx * 1.15, y + 0.95, ez + fz * 1.15, fz ? len : 0.06, 0.06, fz ? 0.06 : len);
+          for (let k = -len / 2; k <= len / 2; k += 1.2) {
+            P(box, railCol, ex + fx * 1.15 + (fz ? k : 0), y + 0.5, ez + fz * 1.15 + (fx ? k : 0), 0.04, 0.8, 0.04);
+          }
+        }
+        break;
       }
     }
     // shop sign on the side facing the nearest street
@@ -773,6 +840,69 @@ export function buildWorld(scene, collision, roads) {
     }
     P(cyl, 0xbbbbbb, tx, base + H + 3, tz, 0.08, 6, 0.08);
     glowing.addGeometry(sphere, makeMatrix(tx, base + H + 6, tz, 0, 0, 0, 0.5, 0.5, 0.5), 0xff2020);
+  }
+
+  // ---------- power lines: wooden poles with sagging wires along the streets ----------
+  {
+    const poles = [];
+    const wire = [];
+    const off = ROAD_HALF + SIDEWALK - 0.5;
+    const freeAt = (x, z) => !collision.query(x, z, 1).some((b) => x + 0.6 > b.x0 && x - 0.6 < b.x1 && z + 0.6 > b.z0 && z - 0.6 < b.z1);
+    for (const e of roads.edges) {
+      if (e.len < 30) continue;
+      const fx = (e.b.x - e.a.x) / e.len;
+      const fz = (e.b.z - e.a.z) / e.len;
+      // left-hand side of the edge's direction, so each street gets one line of poles
+      const sx = fz;
+      const sz = -fx;
+      let prev = null;
+      for (let t = 12; t <= e.len - 12; t += 26) {
+        const x = e.a.x + fx * t + sx * off;
+        const z = e.a.z + fz * t + sz * off;
+        if (!onLandSolid(x, z) || !freeAt(x, z)) {
+          prev = null;
+          continue;
+        }
+        poles.push({ x, z, ry: Math.atan2(fx, fz) });
+        collision.add(x - 0.18, z - 0.18, x + 0.18, z + 0.18, 9);
+        if (prev) {
+          for (const [dy, dl] of [[9, -0.7], [9, 0.7], [8.3, 0]]) {
+            let px = prev.x + (Math.abs(fx) > 0.5 ? 0 : dl);
+            let pz = prev.z + (Math.abs(fz) > 0.5 ? 0 : dl);
+            const qx = x + (Math.abs(fx) > 0.5 ? 0 : dl);
+            const qz = z + (Math.abs(fz) > 0.5 ? 0 : dl);
+            let py = dy;
+            for (let k = 1; k <= 6; k++) {
+              const u = k / 6;
+              const nx = px + (qx - px) / (7 - k);
+              const nz = pz + (qz - pz) / (7 - k);
+              const ny = dy - 0.9 * 4 * u * (1 - u);
+              wire.push(px, py, pz, nx, ny, nz);
+              px = nx;
+              pz = nz;
+              py = ny;
+            }
+          }
+        }
+        prev = { x, z };
+      }
+    }
+    const poleGeo = new THREE.CylinderGeometry(0.12, 0.17, 9.4, 6).translate(0, 4.7, 0);
+    const armGeo = new THREE.BoxGeometry(2, 0.12, 0.12).translate(0, 8.95, 0);
+    const wood = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 1 });
+    const pm = new THREE.InstancedMesh(poleGeo, wood, poles.length);
+    const am = new THREE.InstancedMesh(armGeo, wood, poles.length);
+    poles.forEach((p, i) => {
+      // the cross-arm spans across the street direction so the wires run along it
+      const m = makeMatrix(p.x, 0, p.z, 0, p.ry, 0);
+      pm.setMatrixAt(i, m);
+      am.setMatrixAt(i, m);
+    });
+    pm.castShadow = true;
+    scene.add(pm, am);
+    const wg = new THREE.BufferGeometry();
+    wg.setAttribute('position', new THREE.Float32BufferAttribute(wire, 3));
+    scene.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: 0x1a1a1a })));
   }
 
   // ---------- finalize merged meshes ----------

@@ -87,7 +87,8 @@ export class MeshBuilder {
 
   // Axis-aligned box whose side faces get world-scaled UVs (for window textures).
   // Top and bottom faces sample a fixed texel so roofs stay plain.
-  addBox(x0, y0, z0, x1, y1, z1, color, uScale = 1 / 32, vScale = 1 / 28, uOffset = 0) {
+  // topAlong: 'x' or 'z' maps the top face's u along that axis (for striped kerbs); otherwise roofs stay plain
+  addBox(x0, y0, z0, x1, y1, z1, color, uScale = 1 / 32, vScale = 1 / 28, uOffset = 0, topAlong = null) {
     const c = color instanceof THREE.Color ? color : new THREE.Color(color);
     const faces = [
       // [normal, 4 corners (ccw from outside), uv axis]
@@ -107,6 +108,7 @@ export class MeshBuilder {
         this.normals.push(n[0], n[1], n[2]);
         this.colors.push(c.r, c.g, c.b);
         if (axis) this.uvs.push(uOffset + us[i] * uScale, (p[1] - y0) * vScale);
+        else if (topAlong && n[1] > 0) this.uvs.push((topAlong === 'x' ? p[0] : p[2]) * uScale, 0.5);
         else this.uvs.push(0.002, 0.002);
       });
       this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);

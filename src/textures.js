@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mulberry32 } from './utils.js';
+import { mulberry32, pick } from './utils.js';
 
 function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -24,10 +24,12 @@ function noise(ctx, w, h, rand, alpha, count, size = 2) {
   }
 }
 
-// One tile = 8 window columns x 8 floors (32m x 28m). The corner texel is plain wall, which
-// roofs sample. The emissive twin lights a random subset of windows for night time.
+// Facade atlas styled on downtown Monrovia: one tile = 8 bays x 8 floors (32m x 28m). The bottom row is the
+// ground floor (shop shutters and open stalls), the floors above mix louvre windows, burglar bars and wooden
+// shutters, with rust and rain streaks under every sill. The corner texel stays plain wall for roofs. The
+// emissive twin lights a random subset of windows and shops at night.
 export function makeBuildingTextures() {
-  const S = 512;
+  const S = 1024;
   const cols = 8;
   const rows = 8;
   const rand = mulberry32(7);
@@ -37,25 +39,120 @@ export function makeBuildingTextures() {
   const e = emi.getContext('2d');
   m.fillStyle = '#ffffff';
   m.fillRect(0, 0, S, S);
-  noise(m, S, S, rand, 0.06, 6000, 3);
+  noise(m, S, S, rand, 0.07, 20000, 3);
+  // weathered blotches of mould and faded paint
+  for (let i = 0; i < 90; i++) {
+    const x = rand() * S;
+    const y = rand() * S;
+    const r = 20 + rand() * 90;
+    const grad = m.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, `rgba(${60 + rand() * 40},${60 + rand() * 30},${40 + rand() * 20},${0.08 + rand() * 0.1})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    m.fillStyle = grad;
+    m.fillRect(x - r, y - r, r * 2, r * 2);
+  }
   e.fillStyle = '#000000';
   e.fillRect(0, 0, S, S);
   const cw = S / cols;
   const ch = S / rows;
+  const streak = (x, y, w, len) => {
+    const g = m.createLinearGradient(0, y, 0, y + len);
+    g.addColorStop(0, 'rgba(50,40,30,0.35)');
+    g.addColorStop(1, 'rgba(50,40,30,0)');
+    m.fillStyle = g;
+    m.fillRect(x, y, w, len);
+  };
+  const shutterColors = ['#2f6b3a', '#1f4e79', '#7a3b1f', '#5b6b2f', '#3a7ca5', '#8c2f39'];
+  const doorColors = ['#7d8a96', '#4f6d7a', '#2a6f4e', '#8a8f94', '#355c7d', '#6b705c'];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const x = c * cw + cw * 0.22;
-      const y = r * ch + ch * 0.25;
+      const bx = c * cw;
+      const by = r * ch;
+      if (r === rows - 1) {
+        // ground floor: plinth, then a roll-up shutter or an open shop front
+        m.fillStyle = 'rgba(70,70,70,0.55)';
+        m.fillRect(bx, by + ch * 0.9, cw, ch * 0.1);
+        const x = bx + cw * 0.1;
+        const y = by + ch * 0.18;
+        const w = cw * 0.8;
+        const h = ch * 0.72;
+        if (rand() < 0.55) {
+          m.fillStyle = pick(rand, doorColors);
+          m.fillRect(x, y, w, h);
+          m.fillStyle = 'rgba(0,0,0,0.22)';
+          for (let k = 0; k < h; k += 6) m.fillRect(x, y + k, w, 2);
+          m.fillStyle = 'rgba(0,0,0,0.4)';
+          m.fillRect(x + w / 2 - 4, y + h - 10, 8, 4);
+          if (rand() < 0.3) {
+            e.fillStyle = 'rgba(255,200,120,0.15)';
+            e.fillRect(x, y, w, h);
+          }
+        } else {
+          m.fillStyle = '#1d1a17';
+          m.fillRect(x, y, w, h);
+          // shelves of stock: a few rows of boxes and bags in muted colours
+          const goods = ['#8c3b2f', '#c49a3a', '#3f6f63', '#d8d2c0', '#5b4a7a', '#a8572b'];
+          for (let row = 0; row < 3; row++) {
+            const sy = y + h * (0.32 + row * 0.22);
+            m.fillStyle = 'rgba(120,100,80,0.6)';
+            m.fillRect(x + 4, sy + 14, w - 8, 2);
+            for (let gx = x + 6; gx < x + w - 14; gx += 12 + rand() * 6) {
+              m.fillStyle = pick(rand, goods);
+              m.fillRect(gx, sy, 9, 14);
+            }
+          }
+          e.fillStyle = rand() < 0.6 ? '#ffcf87' : '#000';
+          e.fillRect(x, y, w, h);
+        }
+        m.fillStyle = 'rgba(0,0,0,0.25)';
+        m.fillRect(bx, by + ch * 0.1, cw, 4);
+        continue;
+      }
+      const kind = rand();
+      const x = bx + cw * 0.22;
+      const y = by + ch * 0.22;
       const w = cw * 0.56;
-      const h = ch * 0.5;
-      // canvas y grows downward while texture v grows upward; the corner texel (0,0 in UV)
-      // is the bottom-left of the canvas, which stays wall because of the margins.
-      m.fillStyle = '#2a3440';
-      m.fillRect(x, y, w, h);
-      m.fillStyle = 'rgba(160,200,230,0.25)';
-      m.fillRect(x + 2, y + 2, w * 0.4, h - 4);
-      m.fillStyle = 'rgba(0,0,0,0.25)';
-      m.fillRect(x - 2, y + h, w + 4, 4); // sill shadow
+      const h = ch * 0.52;
+      // frame
+      m.fillStyle = 'rgba(0,0,0,0.3)';
+      m.fillRect(x - 3, y - 3, w + 6, h + 6);
+      if (kind < 0.4) {
+        // louvre (jalousie) glass
+        m.fillStyle = '#3b4a55';
+        m.fillRect(x, y, w, h);
+        m.fillStyle = 'rgba(200,220,235,0.45)';
+        for (let k = 3; k < h; k += 7) m.fillRect(x + 2, y + k, w - 4, 3);
+      } else if (kind < 0.7) {
+        // dark glass behind iron burglar bars
+        m.fillStyle = '#26303a';
+        m.fillRect(x, y, w, h);
+        m.fillStyle = 'rgba(160,200,230,0.18)';
+        m.fillRect(x + 3, y + 3, w * 0.4, h - 6);
+        m.fillStyle = '#151515';
+        for (let k = 0; k <= w; k += 9) m.fillRect(x + k, y, 2, h);
+        for (let k = 0; k <= h; k += 16) m.fillRect(x, y + k, w, 2);
+      } else {
+        // wooden shutters, often one open
+        const col = pick(rand, shutterColors);
+        m.fillStyle = '#1e2328';
+        m.fillRect(x, y, w, h);
+        m.fillStyle = col;
+        m.fillRect(x, y, w / 2 - 1, h);
+        if (rand() < 0.5) m.fillRect(x + w / 2 + 1, y, w / 2 - 1, h);
+        m.fillStyle = 'rgba(0,0,0,0.25)';
+        for (let k = 4; k < h; k += 6) m.fillRect(x, y + k, w, 2);
+      }
+      // sill, rust and rain streaks
+      m.fillStyle = 'rgba(0,0,0,0.3)';
+      m.fillRect(x - 6, y + h + 3, w + 12, 5);
+      streak(x + rand() * w * 0.3, y + h + 8, w * (0.3 + rand() * 0.5), ch * (0.2 + rand() * 0.35));
+      if (rand() < 0.15) {
+        // window AC unit
+        m.fillStyle = '#d8d8d2';
+        m.fillRect(x + w * 0.55, y + h * 0.55, w * 0.4, h * 0.38);
+        m.fillStyle = 'rgba(0,0,0,0.35)';
+        for (let k = 4; k < h * 0.38; k += 4) m.fillRect(x + w * 0.57, y + h * 0.55 + k, w * 0.36, 1);
+      }
       if (rand() < 0.42) {
         const warm = rand();
         e.fillStyle = warm < 0.7 ? '#ffd27a' : warm < 0.9 ? '#fff1c9' : '#9fd0ff';

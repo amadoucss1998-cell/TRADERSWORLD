@@ -88,7 +88,7 @@ class Game {
     this.spawnParked('sports', 205, 132, -Math.PI / 2, 0xd00000);
     this.spawnParked('ambulance', 265, 66, Math.PI / 2).keep = true;
     for (let i = 0; i < 6; i++) this.traffic.spawn(this.player.pos, 30, 200);
-    for (let i = 0; i < 12; i++) this.spawnParkedRandom(this.player.pos, 40, 260);
+    for (let i = 0; i < 24; i++) this.spawnParkedRandom(this.player.pos, 20, 240);
 
     this.headlight = new THREE.SpotLight(0xfff3d6, 0, 70, 0.55, 0.5, 1.2);
     this.headlight.position.set(0, 1, 1.5);
@@ -730,7 +730,7 @@ class Game {
     if (this.parkTimer <= 0) {
       this.parkTimer = 2;
       const parked = this.vehicles.filter((q) => q.driverKind === null && !q.keep).length;
-      if (parked < 14) this.spawnParkedRandom(this.playerPos, 70, 240);
+      if (parked < 26) this.spawnParkedRandom(this.playerPos, 50, 220);
     }
 
     // vehicle damage effects

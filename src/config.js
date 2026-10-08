@@ -4,7 +4,7 @@
 
 export const ROAD_HALF = 7; // half width of a two-lane street
 export const SIDEWALK = 4; // sidewalk width beyond the road edge
-export const LOT_MARGIN = ROAD_HALF + SIDEWALK + 1.5; // buildings start this far from a street centre line
+export const LOT_MARGIN = ROAD_HALF + SIDEWALK + 0.4; // buildings start this far from a street centre line
 export const LANE_OFFSET = 3.4; // AI drives on the right, this far from the centre line
 
 export const WATER_LEVEL = -1.1;

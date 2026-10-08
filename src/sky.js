@@ -6,8 +6,8 @@ const KEYS = [
   [0, 0x050a1a, 0x0e1a33, 0x8899ff, 0.0, 0.35],
   [5, 0x0a1530, 0x1c2b4f, 0x8899ff, 0.0, 0.35],
   [6.2, 0x3a5a8c, 0xf4a261, 0xffb27a, 0.8, 0.6],
-  [8, 0x2f7fd6, 0xbfe3f5, 0xfff1d6, 2.6, 1.0],
-  [16.5, 0x2f7fd6, 0xbfe3f5, 0xfff1d6, 2.6, 1.0],
+  [8, 0x4a8fd0, 0xd3dee2, 0xfff1d6, 2.5, 1.05],
+  [16.5, 0x4a8fd0, 0xd3dee2, 0xfff1d6, 2.5, 1.05],
   [18.3, 0x3d3a6b, 0xff7b54, 0xff9a5a, 1.0, 0.65],
   [19.4, 0x0c1430, 0x2b2d5c, 0x8899ff, 0.0, 0.4],
   [24, 0x050a1a, 0x0e1a33, 0x8899ff, 0.0, 0.35],
@@ -81,7 +81,7 @@ export class Sky {
     scene.add(this.sun, this.sun.target);
     this.moonLight = new THREE.DirectionalLight(0x8899ff, 0);
     scene.add(this.moonLight, this.moonLight.target);
-    scene.fog = new THREE.Fog(0xbfe3f5, 220, 1500);
+    scene.fog = new THREE.Fog(0xd3dee2, 160, 1150); // humid coastal haze
     this.tmpA = new THREE.Color();
     this.tmpB = new THREE.Color();
   }
