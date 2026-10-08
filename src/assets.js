@@ -10,12 +10,38 @@ export const PEOPLE_MODELS = ['male', 'survivor-male', 'survivor-female', 'skate
 
 export const assets = { cars: {}, people: {}, palm: null };
 
+// The published single-file game inlines models as data: URLs, and the artifact's security policy
+// forbids fetch() on those. Decode them by hand, and make GLTFLoader read embedded textures through
+// <img> elements (allowed) instead of fetch-based ImageBitmaps (blocked).
+async function loadModel(loader, src) {
+  let data;
+  if (src.startsWith('data:')) {
+    const bin = atob(src.slice(src.indexOf(',') + 1));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    data = bytes.buffer;
+  } else {
+    const res = await fetch(src);
+    if (!res.ok) throw new Error(`${src}: HTTP ${res.status}`);
+    data = await res.arrayBuffer();
+  }
+  const saved = window.createImageBitmap;
+  window.createImageBitmap = undefined; // GLTFParser picks its texture loader when it is constructed
+  try {
+    const pending = new Promise((resolve, reject) => loader.parse(data, '', resolve, reject));
+    window.createImageBitmap = saved;
+    return await pending;
+  } finally {
+    window.createImageBitmap = saved;
+  }
+}
+
 export async function loadAssets(onProgress) {
   const loader = new GLTFLoader();
   const names = [...CAR_MODELS, ...PEOPLE_MODELS, 'palm-detailed-long'];
   let done = 0;
   await Promise.all(names.map(async (n) => {
-    const gltf = await loader.loadAsync(url(n));
+    const gltf = await loadModel(loader, url(n));
     if (CAR_MODELS.includes(n)) assets.cars[n] = gltf.scene;
     else if (PEOPLE_MODELS.includes(n)) assets.people[n] = gltf.scene;
     else assets.palm = gltf.scene;
