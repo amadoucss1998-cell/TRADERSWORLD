@@ -8,7 +8,8 @@ import {
   makeSignTexture, makeFlagTexture,
 } from './textures.js';
 import { onLand } from './collision.js';
-import { assets } from './assets.js';
+import { assets, PEOPLE_MODELS } from './assets.js';
+import { createHuman, SKIN_TONES } from './character.js';
 
 const WALL_COLORS = [
   0xf2e8cf, 0xf6d6a8, 0xd8e2dc, 0xa8dadc, 0xffcdb2, 0xe9c46a, 0xb5e48c, 0xf4acb7, 0xffffff, 0xd4a373,
@@ -268,7 +269,9 @@ export function buildWorld(scene, collision, roads) {
       }
     }
     // shop sign on the side facing the nearest street
-    if (h >= 7 && h <= 14 && rand() < 0.3) {
+    // Broad Street is lined with shops, so nearly every building there gets a sign
+    const onBroad = Math.abs(cz + 25) < 34 && cx < 165;
+    if (h >= 7 && h <= (onBroad ? 60 : 14) && rand() < (onBroad ? 0.9 : 0.3)) {
       const faces = [
         [cx, z1, 0, x1 - x0], [cx, z0, Math.PI, x1 - x0], [x1, cz, Math.PI / 2, z1 - z0], [x0, cz, -Math.PI / 2, z1 - z0],
       ];
@@ -354,6 +357,8 @@ export function buildWorld(scene, collision, roads) {
     mesh.rotation.y = s.ry;
     mesh.scale.set(s.w, s.w / 4, 1);
     scene.add(mesh);
+    // a shade awning over the shop front, in the sign's colour
+    P(box, new THREE.Color(bg).lerp(new THREE.Color(0xffffff), 0.15), s.x + nx * 0.9, 2.75, s.z + nz * 0.9, Math.abs(nz) > 0.5 ? s.w : 1.8, 0.12, Math.abs(nz) > 0.5 ? 1.8 : s.w);
   }
 
   // ---------- West Point: a dense township of zinc-roofed shacks ----------
@@ -725,6 +730,51 @@ export function buildWorld(scene, collision, roads) {
     scene.add(hill);
   }
 
+  // ---------- Broad Street: shade trees, sidewalk vendors and a radio tower ----------
+  const vendors = [];
+  {
+    const BZ = EW_STREETS[2].z;
+    const nearCross = (x, gap) => NS_STREETS.some((n) => Math.abs(n.x - x) < gap && BZ >= n.z0 && BZ <= n.z1);
+    const clear = (x, z, r) => !collision.query(x, z, r).some((b) => x + r > b.x0 && x - r < b.x1 && z + r > b.z0 && z - r < b.z1);
+    const southZ = BZ + ROAD_HALF + SIDEWALK - 1.2;
+    for (let x = -322; x < 160; x += 10 + rand() * 3) {
+      if (nearCross(x, 13) || !clear(x, southZ, 1.2)) continue;
+      tree(x, southZ, 1.15);
+    }
+    const northZ = BZ - ROAD_HALF - SIDEWALK + 1.4;
+    const goods = [0xff6b35, 0xffd23f, 0x6a994e, 0xbc4749, 0xf2e8cf, 0x8338ec];
+    for (let x = -300; x < 150; x += 19 + rand() * 8) {
+      if (nearCross(x, 15) || !clear(x, northZ, 2)) continue;
+      P(box, 0x6b4f3a, x, 0.5, northZ, 2.4, 1, 1.4);
+      for (let k = 0; k < 4; k++) P(sphere, pick(rand, goods), x - 0.8 + k * 0.55, 1.1, northZ + (rand() - 0.5) * 0.6, 0.45, 0.3, 0.45);
+      P(cyl, 0x444444, x, 1.4, northZ - 0.6, 0.08, 2.8, 0.08);
+      P(cone, pick(rand, [0xe63946, 0xffb703, 0x219ebc, 0xf77f00, 0xffffff]), x, 2.9, northZ - 0.6, 3.6, 0.8, 3.6);
+      collision.add(x - 1.2, northZ - 0.7, x + 1.2, northZ + 0.7, 1.2);
+      const v = createHuman({ model: pick(rand, PEOPLE_MODELS), skin: pick(rand, SKIN_TONES), shirtHue: Math.floor(rand() * 6) / 6 });
+      v.group.position.set(x + 0.4, 0, northZ - 1.3);
+      v.group.rotation.y = 0;
+      scene.add(v.group);
+      vendors.push(v);
+    }
+    // a lattice radio mast on the LNP headquarters roof, like the ones over downtown
+    const tx = -84;
+    const tz = -57;
+    const base = 13;
+    const H = 26;
+    for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      P(box, 0xd0d0d0, tx + dx * 0.7, base + H / 2, tz + dz * 0.7, 0.15, H, 0.15, 0, -dz * 0.035, dx * 0.035);
+    }
+    for (let y = base + 2; y < base + H; y += 2.5) {
+      const w = 1.6 - ((y - base) / H) * 1.0;
+      P(box, 0xc1121f, tx, y, tz - w / 2, w, 0.08, 0.08);
+      P(box, 0xc1121f, tx, y, tz + w / 2, w, 0.08, 0.08);
+      P(box, 0xc1121f, tx - w / 2, y, tz, 0.08, 0.08, w);
+      P(box, 0xc1121f, tx + w / 2, y, tz, 0.08, 0.08, w);
+    }
+    P(cyl, 0xbbbbbb, tx, base + H + 3, tz, 0.08, 6, 0.08);
+    glowing.addGeometry(sphere, makeMatrix(tx, base + H + 6, tz, 0, 0, 0, 0.5, 0.5, 0.5), 0xff2020);
+  }
+
   // ---------- finalize merged meshes ----------
   const mWindowed = new THREE.Mesh(windowed.build(), windowMat);
   const mPlain = new THREE.Mesh(plain.build(), plainMat);
@@ -798,6 +848,7 @@ export function buildWorld(scene, collision, roads) {
     signMeshes: [...signMeshes],
     update(dt, t, night) {
       for (const fn of animated) fn(dt, t, night);
+      for (const v of vendors) v.animate(dt, 0);
       windowMat.emissiveIntensity = night * 0.9;
       glowMat.emissiveIntensity = 0.15 + night * 1.2;
       bulbMat.emissiveIntensity = night * 3;

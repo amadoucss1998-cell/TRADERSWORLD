@@ -803,3 +803,40 @@ button {
 #credits a {
   color: #c9d1e0;
 }
+
+#travel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+  font-size: 13px;
+}
+
+#travel span {
+  color: #c9d1e0;
+  margin-right: 4px;
+}
+
+#travel button {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-family: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#travel button:hover,
+#travel button:focus-visible {
+  background: var(--gold);
+  color: #111;
+  outline: none;
+}
+
+#bigmap-canvas {
+  max-height: calc(100% - 110px);
+}

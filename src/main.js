@@ -115,6 +115,7 @@ class Game {
   }
 
   setupMenus() {
+    this.setupTravel();
     this.setupPhotos();
     const play = document.getElementById('play');
     play.disabled = false;
@@ -137,6 +138,53 @@ class Game {
         : 'Walk with <kbd>W A S D</kbd>. Steal the yellow taxi beside you with <kbd>F</kbd>.<br/>Coloured markers start jobs. <kbd>M</kbd> opens the map.', 9);
     });
     document.getElementById('resume').addEventListener('click', () => this.setPaused(false));
+  }
+
+  // Quick travel from the map. Places are road spots; you arrive in your car if you have one.
+  setupTravel() {
+    const places = [
+      ['Broad Street', -30, -25],
+      ['Ducor Hotel', -300, -75],
+      ['Waterside Market', -110, -120],
+      ['Capitol Hill', 120, 25],
+      ['Executive Mansion', 200, 125],
+      ['Sinkor Beach', 320, 125],
+      ['Red Light Market', 520, 75],
+      ['Providence Island', -60, -228],
+      ['Freeport', 80, -355],
+    ];
+    const bar = document.getElementById('travel');
+    for (const [name, x, z] of places) {
+      const b = document.createElement('button');
+      b.textContent = name;
+      b.addEventListener('click', () => this.travelTo(x, z));
+      bar.appendChild(b);
+    }
+  }
+
+  travelTo(x, z) {
+    if (this.dead) return;
+    if (this.police.stars > 0) {
+      this.hud.help('Lose the police before you travel.', 3);
+      this.toggleMap(false);
+      return;
+    }
+    const n = this.roads.nearestNode(x, z);
+    const next = n.adj.find((o) => o.edge.axis === (Math.abs(z - n.z) < Math.abs(x - n.x) ? 'x' : 'z')) || n.adj[0];
+    const v = this.player.vehicle;
+    const p = this.roads.lanePoint(n, next.node, Math.min(0.5, 20 / next.edge.len), v ? 3.4 : ROAD_HALF + 2.5);
+    if (v) {
+      v.pos.set(p.x, 0, p.z);
+      v.heading = Math.atan2(p.fx, p.fz);
+      v.vx = v.vz = 0;
+      v.syncMesh();
+      this.player.pos.set(p.x, 0, p.z);
+    } else {
+      this.player.setPosition(p.x, p.z, Math.atan2(p.fx, p.fz));
+    }
+    this.cam.yaw = Math.atan2(p.fx, p.fz);
+    for (let i = 0; i < 8; i++) this.traffic.spawn(this.playerPos, 25, 160);
+    this.toggleMap(false);
   }
 
   // Title-screen slideshow and the credits list for the real Monrovia photos.
@@ -431,6 +479,7 @@ class Game {
 
   toggleMap(open) {
     this.mapOpen = open;
+    if (open && document.pointerLockElement) document.exitPointerLock();
     const blips = [...this.missions.blips(), ...this.policeBlips()];
     this.hud.toggleBigMap(open, this.playerPos.x, this.playerPos.z, blips);
   }

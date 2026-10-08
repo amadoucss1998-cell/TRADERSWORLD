@@ -29,8 +29,11 @@ export class Traffic {
 
   findSpawnEdge(near, minD, maxD) {
     const { roads } = this;
+    // downtown Broad Street gets a big share of the traffic, like the real thing
+    const broad = this.broadEdges || (this.broadEdges = roads.edges.filter((e) => e.axis === 'x' && e.a.z === -25 && Math.max(e.a.x, e.b.x) <= 165));
     for (let tries = 0; tries < 40; tries++) {
-      const e = roads.edges[Math.floor(Math.random() * roads.edges.length)];
+      const pool = tries < 20 && Math.random() < 0.35 ? broad : roads.edges;
+      const e = pool[Math.floor(Math.random() * pool.length)];
       const flip = Math.random() < 0.5;
       const a = flip ? e.b : e.a;
       const b = flip ? e.a : e.b;
