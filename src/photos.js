@@ -62,6 +62,7 @@ export function buildPhotoBillboards(scene, roads, collision, avoid = []) {
     let spot = null;
     const lm = LANDMARKS.find((l) => l.id === p.landmark);
     if (lm) spot = findSpot(lm.pos[0], lm.pos[1], 90, roads, collision, taken, avoid);
+    else if (p.near) spot = findSpot(p.near[0], p.near[1], 60, roads, collision, taken, avoid);
     if (!spot) {
       const k = roadside.indexOf(p) >= 0 ? roadside.indexOf(p) : i;
       const x = mainRoad.x0 + 40 + ((k * 0.618 + 0.1) % 1) * (mainRoad.x1 - mainRoad.x0 - 80);
@@ -73,10 +74,12 @@ export function buildPhotoBillboards(scene, roads, collision, avoid = []) {
     g.position.set(spot.x, 0, spot.z);
     g.rotation.y = spot.ry;
     const tex = loader.load(p.url, (t) => {
-      // keep the photo's aspect ratio
-      const h = Math.min(6.5, Math.max(3.5, (WIDTH * t.image.height) / t.image.width));
-      photo.scale.set(WIDTH, h, 1);
-      frame.scale.set(WIDTH + 0.5, h + 0.5, 0.3);
+      // keep the photo's aspect ratio: wide photos are 9m across, tall ones up to 8m high
+      const ar = t.image.height / t.image.width;
+      const w = ar > 0.72 ? Math.min(WIDTH, 8 / ar) : WIDTH;
+      const h = w * ar;
+      photo.scale.set(w, h, 1);
+      frame.scale.set(w + 0.5, h + 0.5, 0.3);
       photo.position.y = frame.position.y = 3.2 + h / 2;
       caption.position.y = 2.7;
     });

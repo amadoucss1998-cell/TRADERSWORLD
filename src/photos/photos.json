@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "broad-street",
+    "file": "broad-street.jpg",
+    "landmark": null,
+    "near": [
+      -30,
+      -25
+    ],
+    "title": "Broad Street, Monrovia",
+    "artist": "Shared by the player",
+    "license": "Used with permission",
+    "licenseUrl": null,
+    "source": null
+  }
+]

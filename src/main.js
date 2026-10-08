@@ -146,12 +146,16 @@ class Game {
     const list = document.getElementById('credit-list');
     for (const p of PHOTOS) {
       const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = p.source;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = credit(p);
-      li.appendChild(a);
+      if (p.source) {
+        const a = document.createElement('a');
+        a.href = p.source;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = credit(p);
+        li.appendChild(a);
+      } else {
+        li.textContent = credit(p);
+      }
       list.appendChild(li);
     }
     document.getElementById('credits').hidden = false;
