@@ -19,6 +19,8 @@ import { Missions } from './missions.js';
 import { Pickups, LONE_STAR_COUNT } from './pickups.js';
 import { Vehicle, collideVehicles, lightsMat, frontLightMat, backLightMat } from './vehicles.js';
 import { loadAssets } from './assets.js';
+import { Graphics } from './graphics.js';
+import { Combat } from './combat.js';
 import { buildPhotoBillboards, PHOTOS } from './photos.js';
 import { clamp, dampAngle, damp } from './utils.js';
 
@@ -41,8 +43,6 @@ class Game {
     const canvas = document.getElementById('game');
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    const mobile = matchMedia('(pointer: coarse)').matches;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.75));
     this.renderer.setSize(innerWidth, innerHeight);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -53,7 +53,7 @@ class Game {
     addEventListener('resize', () => {
       this.camera.aspect = innerWidth / innerHeight;
       this.camera.updateProjectionMatrix();
-      this.renderer.setSize(innerWidth, innerHeight);
+      this.gfx.resize();
     });
 
     this.collision = new Collision();
@@ -62,7 +62,7 @@ class Game {
     const markers = [[-100, -130], [-300, -84], [300, 133], [-139, -45], [SPAWN.x, SPAWN.z]];
     this.photos = buildPhotoBillboards(this.scene, this.roads, this.collision, markers);
     this.sky = new Sky(this.scene);
-    if (mobile) this.sky.sun.shadow.mapSize.set(1024, 1024);
+    this.gfx = new Graphics(this.renderer, this.scene, this.camera, this.sky.sun);
     this.audio = new Audio();
     this.hud = new HUD(this.roads, this.collision);
     this.input = new Input(canvas);
@@ -78,6 +78,7 @@ class Game {
     this.police = new Police(this);
     this.missions = new Missions(this);
     this.pickups = new Pickups(this);
+    this.combat = new Combat(this);
 
     // starter rides
     this.spawnParked('taxi', SPAWN.x + 5.8, SPAWN.z + 8, Math.PI).keep = true;
@@ -138,6 +139,10 @@ class Game {
         : 'Walk with <kbd>W A S D</kbd>. Steal the yellow taxi beside you with <kbd>F</kbd>.<br/>Coloured markers start jobs. <kbd>M</kbd> opens the map.', 9);
     });
     document.getElementById('resume').addEventListener('click', () => this.setPaused(false));
+    const gfxBtn = document.getElementById('gfx');
+    const q = this.gfx.quality;
+    gfxBtn.textContent = `Graphics: ${q[0].toUpperCase()}${q.slice(1)}`;
+    gfxBtn.addEventListener('click', () => this.cycleGraphics());
   }
 
   // Quick travel from the map. Places are road spots; you arrive in your car if you have one.
@@ -221,6 +226,14 @@ class Game {
       if (this.started) clearInterval(this.slideshow);
       else show();
     }, 6000);
+  }
+
+  cycleGraphics() {
+    const q = this.gfx.cycle();
+    const label = q[0].toUpperCase() + q.slice(1);
+    this.hud.toast(`Graphics: ${label}`);
+    const b = document.getElementById('gfx');
+    if (b) b.textContent = `Graphics: ${label}`;
   }
 
   setPaused(p) {
@@ -444,13 +457,13 @@ class Game {
     if (!this.started || this.paused) {
       // keep the city alive behind the menu
       if (!this.started) this.idleCamera(raw);
-      this.renderer.render(this.scene, this.camera);
+      this.gfx.render();
       input.endFrame();
       return;
     }
     if (input.wasPressed('KeyM')) this.toggleMap(!this.mapOpen);
     if (this.mapOpen) {
-      this.renderer.render(this.scene, this.camera);
+      this.gfx.render();
       input.endFrame();
       return;
     }
@@ -461,7 +474,7 @@ class Game {
     this.updateWorld(raw);
     this.updateCamera(raw);
     this.updateHUD(raw);
-    this.renderer.render(this.scene, this.camera);
+    this.gfx.render();
     input.endFrame();
   }
 
@@ -472,6 +485,7 @@ class Game {
     this.camera.lookAt(-60, 0, -40);
     this.sky.update(dt, this.camera.position, 24 / DAY_LENGTH_SECONDS);
     this.world.update(dt, this.time, this.sky.night);
+    this.gfx.update(this.sky.night);
     this.traffic.update(dt);
     collideVehicles(this.vehicles, (this.events = []));
     this.peds.update(dt, this.player.pos);
@@ -480,7 +494,7 @@ class Game {
   toggleMap(open) {
     this.mapOpen = open;
     if (open && document.pointerLockElement) document.exitPointerLock();
-    const blips = [...this.missions.blips(), ...this.policeBlips()];
+    const blips = [...this.missions.blips(), ...this.policeBlips(), ...this.pickups.ammoBlips()];
     this.hud.toggleBigMap(open, this.playerPos.x, this.playerPos.z, blips);
   }
 
@@ -497,6 +511,7 @@ class Game {
       }
     }
     if (input.wasPressed('KeyC')) this.cam.far = !this.cam.far;
+    if (input.wasPressed('KeyG')) this.cycleGraphics();
     if (input.wasPressed('KeyR')) {
       this.audio.radioOn = !this.audio.radioOn;
       this.hud.toast(this.audio.radioOn ? 'Radio: LONE STAR FM 104' : 'Radio off');
@@ -511,7 +526,12 @@ class Game {
       if (this.missions.active?.def.id === 'taxi') this.missions.endTaxi('You clocked off.');
       else if (!this.missions.active && pl.vehicle?.type === 'taxi') this.missions.startTaxi();
     }
-    if (!pl.vehicle && input.wasPressed('KeyJ', 'Mouse0') && pl.punch()) {
+    if (input.wasPressed('Digit1')) this.combat.select('fists');
+    if (input.wasPressed('Digit2')) this.combat.select('pistol');
+    if (input.wasPressed('Tab', 'KeyX')) this.combat.toggle();
+    if (this.combat.armed) {
+      if (input.wasPressed('KeyJ', 'Mouse0') || (input.isDown('Mouse0Held', 'KeyJ') && this.combat.cooldown <= 0)) this.combat.fire();
+    } else if (!pl.vehicle && input.wasPressed('KeyJ', 'Mouse0') && pl.punch()) {
       this.pendingPunch = 0.13;
     }
   }
@@ -621,7 +641,7 @@ class Game {
           pl.pos.z += nz * (r - d);
           const toward = v.vx * nx + v.vz * nz;
           if (sp > 4 && toward > 2) {
-            this.hurt(sp * 2.2);
+            this.hurt(sp * (v.driverKind === 'police' ? 0.9 : 2.2));
             pl.kx = v.vx * 0.8 + nx * 4;
             pl.kz = v.vz * 0.8 + nz * 4;
             pl.vy = Math.min(7, sp * 0.4);
@@ -755,10 +775,12 @@ class Game {
 
     this.missions.update(dt);
     this.pickups.update(dt);
+    this.combat.update(dt);
     this.particles.update(dt);
     this.sky.update(dt, this.playerPos, 24 / DAY_LENGTH_SECONDS);
     this.world.update(dt, this.time, this.sky.night);
     this.photos.update(this.sky.night);
+    this.gfx.update(this.sky.night);
     lightsMat.color.setScalar(0.75 + this.sky.night * 1.2);
     frontLightMat.color.setRGB(1, 0.96, 0.84).multiplyScalar(0.8 + this.sky.night * 1.6);
     backLightMat.color.setRGB(0.82, 0.06, 0.06).multiplyScalar(0.8 + this.sky.night * 1.8);
@@ -821,6 +843,15 @@ class Game {
     } else {
       target = new THREE.Vector3(pl.pos.x, pl.y + 1.65, pl.pos.z);
       dist = 4.8;
+      if (this.combat.armed) {
+        // over-the-shoulder aim at chest height: the player turns with the camera
+        target.y = pl.y + 1.45;
+        target.x += -Math.cos(cam.yaw) * 0.75;
+        target.z += Math.sin(cam.yaw) * 0.75;
+        dist = 3.2;
+        pl.heading = cam.yaw;
+        pl.sync();
+      }
       if (since > 2.5 && pl.moveSpeed > 1 && input.move.y > 0.2) cam.yaw = dampAngle(cam.yaw, pl.heading, 1.2, dt);
     }
     if (cam.far) dist *= 1.7;
@@ -854,7 +885,7 @@ class Game {
       pos.z += (Math.random() - 0.5) * s;
     }
     this.camera.position.copy(pos);
-    this.camera.lookAt(target.x, target.y + 0.2, target.z);
+    this.camera.lookAt(target.x, target.y + (this.combat.armed ? 0 : 0.2), target.z);
     const fov = 65 + (v ? clamp(Math.abs(v.speed) - 10, 0, 30) * 0.45 : 0);
     if (Math.abs(this.camera.fov - fov) > 0.05) {
       this.camera.fov = damp(this.camera.fov, fov, 3, dt);
@@ -877,6 +908,7 @@ class Game {
     hud.setHealth(pl.health);
     hud.setStars(this.police.stars, this.police.evading);
     hud.setBust(this.police.bust / (v ? 3 : 1.8));
+    hud.setWeapon(this.combat.weapon, this.combat.ammo, this.combat.armed);
     hud.setVehicle(v);
     hud.setClock(this.sky.clock);
     this.locTimer -= dt;
@@ -903,6 +935,7 @@ class Game {
       { x: HOSPITAL_SPAWN.x, z: HOSPITAL_SPAWN.z, color: '#ffffff', size: 4, shape: 'square' },
       ...this.pickups.stars.filter((s) => !s.taken && Math.hypot(s.x - p.x, s.z - p.z) < 45).map((s) => ({ x: s.x, z: s.z, color: '#ffffff', size: 3 })),
       ...this.policeBlips(),
+      ...this.pickups.ammoBlips().filter((b) => Math.hypot(b.x - p.x, b.z - p.z) < 160),
       ...this.missions.blips(),
     ];
     const heading = v ? v.heading : pl.heading;

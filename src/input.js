@@ -32,10 +32,14 @@ export class Input {
           }
         }
         this.pressed.add('Mouse0');
+        this.down.add('Mouse0Held');
       }
       this.mouseDown = true;
     });
-    addEventListener('mouseup', () => (this.mouseDown = false));
+    addEventListener('mouseup', () => {
+      this.mouseDown = false;
+      this.down.delete('Mouse0Held');
+    });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
     });

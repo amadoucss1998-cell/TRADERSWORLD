@@ -223,7 +223,8 @@ export class Police {
     let steer = clamp(-diff * 2.5, -1, 1);
     let throttle = 1;
     if (Math.abs(diff) > 0.9 && c.speed > 14) throttle = -0.6;
-    if (!pv && d < 9) throttle = clamp((d - 5) * 0.2, -1, 0.4) - (c.speed > 4 ? 0.6 : 0);
+    // on foot: slow right down on approach and stop beside the player instead of running them over
+    if (!pv && d < 26) throttle = clamp((d - 7) * 0.12, -1, 0.5) - (c.speed > 4 + d * 0.45 ? 1.2 : 0);
     if (Math.abs(diff) > 2.2 && d < 25) {
       // target is behind us: back up while turning
       throttle = -0.7;

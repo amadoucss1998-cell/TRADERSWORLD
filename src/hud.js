@@ -17,6 +17,7 @@ export class HUD {
       car: $('carinfo'), carName: $('car-name'), speed: $('speed'), carHealth: $('car-health-fill'),
       mini: $('minimap'), bigmap: $('bigmap'), bigCanvas: $('bigmap-canvas'), toasts: $('toasts'),
       flash: $('flash'), bust: $('bust-fill'), bustWrap: $('bust'),
+      crosshair: $('crosshair'), weapon: $('weapon-name'), ammo: $('ammo'),
     };
     this.moneyShown = 0;
     this.moneyTarget = 0;
@@ -74,6 +75,14 @@ export class HUD {
     this.el.stars.classList.remove('pulse');
     void this.el.stars.offsetWidth;
     this.el.stars.classList.add('pulse');
+  }
+
+  setWeapon(name, ammo, aiming) {
+    const label = name === 'pistol' ? 'PISTOL' : 'FISTS';
+    if (this.el.weapon.textContent !== label) this.el.weapon.textContent = label;
+    const a = name === 'pistol' || ammo > 0 ? `${ammo}` : '';
+    if (this.el.ammo.textContent !== a) this.el.ammo.textContent = a;
+    this.el.crosshair.hidden = !aiming;
   }
 
   setBust(k) {

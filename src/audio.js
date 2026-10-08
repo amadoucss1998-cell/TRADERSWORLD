@@ -154,6 +154,13 @@ export class Audio {
     this.tone(90, 0.25, 'sawtooth', 0.15 * v, 0, -50);
   }
 
+  gunshot(pos, base = 1) {
+    const v = this.vol(pos, base);
+    this.noise(0.18, 0.7 * v, 2200);
+    this.noise(0.5, 0.25 * v, 400);
+    this.tone(140, 0.12, 'square', 0.12 * v, 0, -90);
+  }
+
   punch() {
     this.noise(0.12, 0.35, 500);
     this.tone(120, 0.1, 'sine', 0.3, 0, -60);

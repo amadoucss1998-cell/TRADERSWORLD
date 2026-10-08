@@ -63,6 +63,31 @@ export class Pickups {
     }
   }
 
+  // Ammo crates: fixed spots that refill after a minute.
+  placeAmmo() {
+    const g = this.game;
+    const rand = mulberry32(4471);
+    const geo = new THREE.BoxGeometry(0.9, 0.55, 0.6);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x4b5320, roughness: 0.7 });
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.12, 0.62), new THREE.MeshStandardMaterial({ color: 0xffd166, emissive: 0xffd166, emissiveIntensity: 0.4 }));
+    this.ammo = [];
+    let tries = 0;
+    while (this.ammo.length < 10 && tries++ < 4000) {
+      const x = -340 + rand() * 900;
+      const z = -420 + rand() * 580;
+      if (!onLand(x, z, 3) || g.roads.onRoad(x, z, -1) || !g.roads.onRoad(x, z, 6)) continue;
+      if (g.collision.query(x, z, 1.5).some((b) => x > b.x0 - 1 && x < b.x1 + 1 && z > b.z0 - 1 && z < b.z1 + 1)) continue;
+      if (this.ammo.some((a) => Math.hypot(a.x - x, a.z - z) < 80)) continue;
+      const m = new THREE.Group();
+      const crate = new THREE.Mesh(geo, mat);
+      crate.castShadow = true;
+      m.add(crate, band.clone());
+      m.position.set(x, 0.3, z);
+      g.scene.add(m);
+      this.ammo.push({ x, z, mesh: m, wait: 0 });
+    }
+  }
+
   dropCash(x, z, amount) {
     const m = new THREE.Mesh(this.cashGeo, this.cashMat);
     m.position.set(x, 0.3, z);
@@ -99,6 +124,22 @@ export class Pickups {
         g.persist();
       }
     }
+    if (!this.ammo) this.placeAmmo();
+    for (const a of this.ammo) {
+      if (a.wait > 0) {
+        a.wait -= dt;
+        a.mesh.visible = a.wait <= 0;
+        continue;
+      }
+      a.mesh.rotation.y += dt;
+      if (!g.player.vehicle && Math.abs(p.x - a.x) < 1.6 && Math.abs(p.z - a.z) < 1.6) {
+        a.wait = 60;
+        a.mesh.visible = false;
+        g.combat.addAmmo(24);
+        g.audio.pickup();
+        g.hud.toast('Pistol ammo +24  (press Tab for the pistol)', 'good');
+      }
+    }
     for (const c of this.cash) {
       c.life -= dt;
       c.mesh.rotation.y += dt * 3;
@@ -110,6 +151,10 @@ export class Pickups {
       if (c.life <= 0) g.scene.remove(c.mesh);
     }
     this.cash = this.cash.filter((c) => c.life > 0);
+  }
+
+  ammoBlips() {
+    return (this.ammo || []).filter((a) => a.wait <= 0).map((a) => ({ x: a.x, z: a.z, color: '#9acd32', size: 3, shape: 'square' }));
   }
 
   blips(showAll) {

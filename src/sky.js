@@ -23,6 +23,8 @@ export class Sky {
       horizon: { value: new THREE.Color() },
       sunDir: { value: new THREE.Vector3(0, 1, 0) },
       sunCol: { value: new THREE.Color() },
+      time: { value: 0 },
+      night: { value: 0 },
     };
     const dome = new THREE.Mesh(
       new THREE.SphereGeometry(3000, 32, 16),
@@ -32,12 +34,27 @@ export class Sky {
         fog: false,
         uniforms: this.uniforms,
         vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = modelViewMatrix*vec4(position,1.0); gl_Position = projectionMatrix*p; gl_Position.z = gl_Position.w; }`,
-        fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 sunDir; uniform vec3 sunCol; varying vec3 vDir;
+        fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 sunDir; uniform vec3 sunCol; uniform float time; uniform float night; varying vec3 vDir;
+          float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+          float noise(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f*f*(3.0-2.0*f);
+            return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
+          float fbm(vec2 p){ float v = 0.0; float a = 0.5; for (int i = 0; i < 5; i++){ v += a*noise(p); p *= 2.03; a *= 0.5; } return v; }
           void main(){
-            float h = clamp(vDir.y, -0.2, 1.0);
+            vec3 dir = normalize(vDir);
+            float h = clamp(dir.y, -0.2, 1.0);
             vec3 c = mix(horizon, top, pow(max(h,0.0), 0.55));
-            float s = max(dot(normalize(vDir), sunDir), 0.0);
+            float s = max(dot(dir, sunDir), 0.0);
             c += sunCol * (pow(s, 600.0) * 4.0 + pow(s, 12.0) * 0.25);
+            // drifting tropical cumulus
+            if (dir.y > 0.0) {
+              vec2 uv = dir.xz / (dir.y + 0.12) * 1.4 + vec2(time * 0.006, time * 0.002);
+              float d = fbm(uv);
+              float cover = smoothstep(0.5, 0.78, d) * smoothstep(0.0, 0.18, dir.y);
+              float shade = smoothstep(0.5, 0.95, fbm(uv + vec2(0.08, 0.05)));
+              vec3 cloud = mix(vec3(1.0), horizon * 0.75, shade * 0.6) * (0.35 + 0.65 * (1.0 - night));
+              cloud += sunCol * pow(s, 6.0) * 0.4;
+              c = mix(c, cloud, cover * 0.9);
+            }
             gl_FragColor = vec4(c, 1.0);
           }`,
       }),
@@ -106,6 +123,8 @@ export class Sky {
     this.uniforms.sunDir.value.copy(dir);
     this.uniforms.sunCol.value.copy(k.sunCol).multiplyScalar(dir.y > -0.05 ? 1 : 0);
     this.night = clamp(1 - k.sunI / 1.2, 0, 1);
+    this.uniforms.time.value += dt;
+    this.uniforms.night.value = this.night;
     this.sun.color.copy(k.sunCol);
     this.sun.intensity = k.sunI;
     this.sun.position.set(center.x + dir.x * 300, Math.max(dir.y, 0.15) * 300, center.z + dir.z * 300);

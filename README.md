@@ -26,13 +26,15 @@ on every push to `main`). `npm run build:single` inlines everything into one sel
 | `Shift` | sprint |
 | `Space` | jump / handbrake |
 | `F` or `E` | get in, get out, or jack a car |
-| `J` or left click | punch |
+| `J` or left click | punch, or shoot when holding the pistol (hold to keep firing) |
+| `Tab` / `X`, or `1` and `2` | switch between fists and pistol |
 | `H` | horn |
 | `Q` | siren (in a police car) |
 | `T` | start or stop a taxi job (in a yellow taxi) |
 | `M` | city map |
 | `C` | near / far camera |
 | `R` | radio on / off |
+| `G` | graphics quality: Low, High, Ultra |
 | `P` | pause |
 
 On phones and tablets an on-screen joystick and buttons appear; drag the screen to look.
@@ -54,6 +56,10 @@ On phones and tablets an on-screen joystick and buttons appear; drag the screen 
 - **Jobs:** Waterside Hustle (delivery), Ducor Dash (race), Freeport Run (steal and deliver), Lose the Heat
   (escape), plus taxi fares in any yellow taxi.
 - **Collectibles:** 24 hidden Lone Stars.
+- **Weapons:** fists and a pistol with an over-the-shoulder aim. Ammo crates (green on the map) refill it.
+  From two stars the police shoot back.
+- **Graphics:** Low (phones), High (reflections, bloom, colour grading, MSAA) and Ultra (adds ambient
+  occlusion and sharper shadows). The sky has drifting clouds.
 - **Day and night:** a full day lasts 10 minutes; windows, street lamps and the lighthouse light up at night.
 
 Progress (money, finished jobs, Lone Stars) is saved in your browser.

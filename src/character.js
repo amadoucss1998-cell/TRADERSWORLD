@@ -59,6 +59,18 @@ export function createHuman({ model = PEOPLE_MODELS[0], skin = SKIN_TONES[0], sh
   g.scale.setScalar(scale);
 
   // rotate a bone by a model-space rotation q, measured from its rest pose
+  // a pistol held in the right hand, shown while aiming
+  const gun = new THREE.Group();
+  const gunMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.6 });
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.22), gunMat);
+  slide.position.set(0, 0.02, 0.06);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.06), gunMat);
+  grip.position.set(0, -0.05, -0.02);
+  grip.rotation.x = 0.25;
+  gun.add(slide, grip);
+  gun.visible = false;
+  g.add(gun);
+
   const pose = (name, q) => {
     const e = bones[name];
     if (!e) return;
@@ -71,6 +83,8 @@ export function createHuman({ model = PEOPLE_MODELS[0], skin = SKIN_TONES[0], sh
     body,
     phase: Math.random() * 10,
     punch: 0,
+    aiming: false,
+    gun,
     animate(dt, speed, airborne = false) {
       const run = Math.min(1, Math.max(0, (speed - 4.5) / 3));
       const amp = Math.min(1, speed / 4.4) * (0.55 + run * 0.35);
@@ -103,10 +117,13 @@ export function createHuman({ model = PEOPLE_MODELS[0], skin = SKIN_TONES[0], sh
         const k = Math.sin((Math.max(0, this.punch) / 0.3) * Math.PI);
         right = qc.copy(right).slerp(rot(Y, 1.45, qa), k);
       }
+      if (this.aiming) right = rot(Y, 1.5, qc);
       pose('RightArm', right);
       const elbow = 0.25 + run * 0.9;
       pose('LeftForeArm', rot(Y, -elbow));
-      pose('RightForeArm', rot(Y, this.punch > 0 ? 0 : elbow));
+      pose('RightForeArm', rot(Y, this.punch > 0 || this.aiming ? 0 : elbow));
+      gun.visible = this.aiming;
+      if (this.aiming) gun.position.set(-0.18, 1.42, 0.62);
       pose('Spine', rot(X, run * 0.22 + idle));
       body.position.y = Math.abs(c) * amp * 0.07;
     },

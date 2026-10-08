@@ -22,6 +22,8 @@
         <div id="healthbar"><div id="health-fill"></div></div>
       </div>
       <div id="toasts"></div>
+      <div id="crosshair" hidden></div>
+      <div id="weapon"><span id="weapon-name">FISTS</span> <span id="ammo"></span></div>
       <div id="helpbox" hidden></div>
       <div id="timer" hidden>0:00</div>
       <div id="bust" hidden><span>BUSTED</span><div><div id="bust-fill"></div></div></div>
@@ -46,6 +48,7 @@
         <span><i style="background:#ffd166"></i>Landmark / objective</span>
         <span><i class="sq" style="background:#ff006e"></i>Spray shop (clears wanted level)</span>
         <span><i style="background:#3a86ff"></i>Police</span>
+        <span><i class="sq" style="background:#9acd32"></i>Ammo crate</span>
         <span>Press <kbd>M</kbd> to close</span>
       </div>
     </div>
@@ -55,7 +58,8 @@
       <div id="buttons">
         <button data-key="KeyF">CAR</button>
         <button data-key="Space">JUMP<br />BRAKE</button>
-        <button data-key="KeyJ">PUNCH</button>
+        <button data-key="KeyJ">PUNCH<br />FIRE</button>
+        <button data-key="KeyX">GUN</button>
         <button data-key="ShiftLeft">RUN</button>
         <button data-key="KeyH">HORN</button>
         <button data-key="KeyT">TAXI</button>
@@ -76,11 +80,12 @@
           <div><kbd>Shift</kbd> sprint</div>
           <div><kbd>Space</kbd> jump / handbrake</div>
           <div><kbd>F</kbd> / <kbd>E</kbd> enter, exit or steal a car</div>
-          <div><kbd>J</kbd> / <kbd>Click</kbd> punch</div>
+          <div><kbd>J</kbd> / <kbd>Click</kbd> punch or shoot</div>
+          <div><kbd>Tab</kbd> / <kbd>1</kbd> <kbd>2</kbd> fists or pistol</div>
           <div><kbd>H</kbd> horn &nbsp; <kbd>Q</kbd> siren (police car)</div>
           <div><kbd>T</kbd> taxi job (in a yellow taxi)</div>
           <div><kbd>M</kbd> map &nbsp; <kbd>C</kbd> camera &nbsp; <kbd>R</kbd> radio</div>
-          <div><kbd>P</kbd> pause</div>
+          <div><kbd>P</kbd> pause &nbsp; <kbd>G</kbd> graphics quality</div>
         </div>
         <p class="fine">Find all 24 hidden Lone Stars. Complete jobs at the coloured markers. Pink garages clear your wanted level.</p>
       </div>
@@ -91,6 +96,7 @@
         <h2>Paused</h2>
         <div id="stats"></div>
         <button id="resume">Resume</button>
+        <button id="gfx" class="secondary">Graphics: High</button>
         <details id="credits" hidden>
           <summary>Photo credits</summary>
           <ul id="credit-list"></ul>
